@@ -58,6 +58,11 @@ public sealed class RoleCatalog
         ("Waveshaper", Role.Modifier),
         ("Distortion", Role.Modifier),
         ("Equalizer", Role.Modifier),
+        ("Compressor", Role.Modifier),
+        ("Limiter", Role.Modifier),
+        ("Dynamics", Role.Modifier),
+        ("Low-pass gate", Role.Modifier),
+        ("Lowpass gate", Role.Modifier),
         ("External", Role.Io),
     };
 

@@ -1,2 +1,3 @@
+Fundamental: older copy in Fundamental skipped, Fundamental is newer
 mscHack: older copy in mscHack skipped, mschack-VCV-Rack-Plugins is newer
 CountModula: no sources found, 138 modules kept from the previous catalog

@@ -324,7 +324,7 @@ public class AnalyzerTests
 
     [Theory]
     [InlineData("VCF #1", ModuleFunction.Filter)]
-    [InlineData("ADSR #2", ModuleFunction.Envelope)]
+    [InlineData("ADSR EG #2", ModuleFunction.Envelope)]
     [InlineData("LLFO", ModuleFunction.Lfo)]
     [InlineData("Random", ModuleFunction.Random)]
     [InlineData("Clkd", ModuleFunction.Clock)]
@@ -516,8 +516,8 @@ public class AnalyzerTests
         IReadOnlyList<PatchGroup> groups = PatchGrouping.Build(zones);
         List<string> Members(string key) => groups.Single(g => g.Key == key).Members.Select(id => zones.Module(id).Title).ToList();
 
-        Assert.Contains("ADSR #1", Members("voice-1"));
-        Assert.Equal(new[] { "ADSR #2", "Octave", "VCA" }, Members("voice-2").Intersect(new[] { "ADSR #2", "Octave", "VCA" }).Order());
+        Assert.Contains("ADSR EG #1", Members("voice-1"));
+        Assert.Equal(new[] { "ADSR EG #2", "Octave", "VCA" }, Members("voice-2").Intersect(new[] { "ADSR EG #2", "Octave", "VCA" }).Order());
         Assert.Equal(new[] { "Audio 2", "VCA Mix" }, Members("bus").Order());
     }
 

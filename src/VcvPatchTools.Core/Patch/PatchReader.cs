@@ -56,6 +56,7 @@ public static class PatchReader
                 LearnedNotes = Integers((module["data"] as JsonObject)?["notes"]),
                 LearnedCcs = Integers((module["data"] as JsonObject)?["ccs"]),
                 Labels = Labels(module["data"] as JsonObject),
+                LinkedSourceId = PatchJson.Long((module["data"] as JsonObject)?["srcId"]),
             });
         }
 

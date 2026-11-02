@@ -46,6 +46,7 @@
   "Core/MIDICCToCVInterface": "Io",
   "Core/MIDIToCVInterface": "Io",
   "Core/MIDITriggerToCVInterface": "Io",
+  "FLAG-Prism-Of-Perception/Prism-Of-Perception": "Effect",
   "Fundamental/8vert": "Controller",
   "Fundamental/ADSR": "Controller",
   "Fundamental/Octave": "Pitch",
@@ -55,6 +56,7 @@
   "Fundamental/SequentialSwitch1": "Router",
   "Fundamental/SequentialSwitch2": "Router",
   "HetrickCV/MinMax": "Controller",
+  "HoyerHoppes/phase_driven_multihit_envelope": "Controller",
   "ImpromptuModular/Clocked": "Time",
   "ImpromptuModular/Clocked-Clkd": "Time",
   "JW-Modules/FullScope": "Monitor",
@@ -66,6 +68,9 @@
   "SurgeXTRack/SurgeXTVCF": "Modifier",
   "SurgeXTRack/SurgeXTWaveshaper": "Modifier",
   "Valley/Plateau": "Effect",
+  "Venom/BayInput": "Router",
+  "Venom/BayNorm": "Router",
+  "Venom/BayOutput": "Router",
   "Venom/Knob5": "Controller",
   "unless_modules/pianoid": "Performance"
 }

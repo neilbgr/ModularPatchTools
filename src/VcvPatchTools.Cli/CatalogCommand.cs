@@ -46,9 +46,9 @@ internal static class CatalogCommand
             {
                 continue;
             }
-            if (ManifestIdentity(manifestPath) is (string duplicate, Version _) && newest[duplicate].Manifest != manifestPath)
+            if (ManifestIdentity(manifestPath) is (string duplicate, Version older) && newest[duplicate].Manifest != manifestPath)
             {
-                problems.Add($"{duplicate}: older copy in {Path.GetFileName(pluginDir)} skipped, {Path.GetFileName(Path.GetDirectoryName(newest[duplicate].Manifest))} is newer");
+                problems.Add($"{duplicate}: {older} in {Path.GetRelativePath(".", pluginDir)} skipped, {newest[duplicate].Version} in {Path.GetRelativePath(".", Path.GetDirectoryName(newest[duplicate].Manifest)!)} is newer");
                 continue;
             }
 
@@ -172,12 +172,21 @@ internal static class CatalogCommand
             using System.Text.Json.JsonDocument manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllText(manifestPath), new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
             string? slug = manifest.RootElement.TryGetProperty("slug", out System.Text.Json.JsonElement s) ? s.GetString() : null;
             string? version = manifest.RootElement.TryGetProperty("version", out System.Text.Json.JsonElement v) ? v.GetString() : null;
-            return slug is null ? null : (slug, Version.TryParse(version, out Version? parsed) ? parsed : new Version(0, 0));
+            return slug is null ? null : (slug, ParseVersion(version));
         }
         catch (System.Text.Json.JsonException)
         {
             return null;
         }
+    }
+
+    /// <summary>"2.6.5.rc1" → 2.6.5: the leading numeric part, so a pre-release still compares above older releases.</summary>
+    internal static Version ParseVersion(string? text)
+    {
+        string numeric = new string((text ?? "").TakeWhile(c => char.IsAsciiDigit(c) || c == '.').ToArray()).Trim('.');
+        string[] parts = numeric.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        string padded = string.Join('.', parts.Take(4).Concat(Enumerable.Repeat("0", Math.Max(0, 2 - parts.Length))));
+        return Version.TryParse(padded, out Version? parsed) ? parsed : new Version(0, 0);
     }
 
     // 4ms writes .cc / .hh.
@@ -192,6 +201,50 @@ internal static class CatalogCommand
     /// "catalog cardinal": which modules official Cardinal and the neilbgr edition load, from two Cardinal source trees
     /// (plugins/plugins.cpp, plugins/*/plugin.json, src/override/plugin.cpp). Upstream is exported by scripts/export-cardinal-upstream.sh.
     /// </summary>
+    /// <summary>
+    /// "catalog library": names and tags of the VCV Library's modules that neither ports.json nor ports.overrides.json
+    /// (next to it) know, for closed-source plugins and sources not fetched.
+    /// </summary>
+    public static int Library(string manifestsDir, string portsPath, string outputPath)
+    {
+        if (!Directory.Exists(manifestsDir))
+        {
+            Console.Error.WriteLine($"Manifests folder not found: {manifestsDir}");
+            return 1;
+        }
+        string overridesPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(portsPath))!, "ports.overrides.json");
+        HashSet<string> known = new[] { portsPath, overridesPath }.Where(File.Exists)
+            .SelectMany(p => PortCatalog.FromJson(File.ReadAllText(p)).Modules.Keys).ToHashSet(StringComparer.Ordinal);
+
+        Dictionary<string, ModuleInfo> missing = new Dictionary<string, ModuleInfo>(StringComparer.Ordinal);
+        SortedSet<string> plugins = new SortedSet<string>(StringComparer.Ordinal);
+        int manifests = 0;
+        foreach (string manifestPath in Directory.EnumerateFiles(manifestsDir, "*.json").Order(StringComparer.Ordinal))
+        {
+            try
+            {
+                foreach ((string key, ModuleInfo info) in LibraryManifests.Modules(File.ReadAllText(manifestPath)))
+                {
+                    plugins.Add(key[..key.IndexOf('/')]);
+                    if (!known.Contains(key))
+                    {
+                        missing[key] = info;
+                    }
+                }
+                manifests++;
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                Console.Error.WriteLine($"{Path.GetFileName(manifestPath)}: unreadable ({ex.Message})");
+            }
+        }
+        File.WriteAllText(outputPath, LibraryManifests.ToJson(missing));
+        string pluginsPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(outputPath))!, "library-plugins.json");
+        File.WriteAllText(pluginsPath, "[\n" + string.Join(",\n", plugins.Select(p => "  " + System.Text.Json.JsonSerializer.Serialize(p))) + "\n]\n");
+        Console.WriteLine($"{manifests} manifests, {plugins.Count} plugins → {pluginsPath}, {missing.Count} modules without port names → {outputPath}");
+        return 0;
+    }
+
     public static int Cardinal(string upstreamRoot, string forkRoot, string outputPath)
     {
         CardinalScan? upstream = ScanCardinal(upstreamRoot);

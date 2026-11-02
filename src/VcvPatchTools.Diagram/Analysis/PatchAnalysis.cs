@@ -84,4 +84,7 @@ public sealed record PatchAnalysis(
 
     /// <summary>Feedback loops (cross-modulation, audio feedback…): modules that all feed each other, in rack order.</summary>
     public IReadOnlyList<IReadOnlyList<long>> Loops { get; init; } = Array.Empty<IReadOnlyList<long>>();
+
+    /// <summary>"Plugin/Model" of the published modules (VCV Library) whose port names the catalog lacks: worth reporting.</summary>
+    public IReadOnlyList<string> MissingPortNames { get; init; } = Array.Empty<string>();
 }

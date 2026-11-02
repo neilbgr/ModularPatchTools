@@ -84,6 +84,10 @@
                     <li>@diagnostic</li>
                 }
             </ul>
+            @if (analysis?.MissingPortNames.Count > 0)
+            {
+                <p class="vpd-diag"><a href="@IssueReport.MissingPortNamesUrl(analysis.MissingPortNames, fileTitle)" target="_blank" rel="noopener">Report the modules without port names ↗</a></p>
+            }
         }
 
         @if (diagram is not null && tab == Tab.Diagram)

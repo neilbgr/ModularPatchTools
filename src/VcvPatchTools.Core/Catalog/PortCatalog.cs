@@ -23,12 +23,16 @@ public sealed class PortCatalog
 
     public IReadOnlyDictionary<string, ModuleInfo> Modules => modules;
 
-    /// <summary>The generated catalog merged with the overrides, both embedded in this assembly.</summary>
+    /// <summary>
+    /// The VCV Library's names and tags (modules without readable sources), under the catalog generated from sources,
+    /// under the hand-written overrides: all three embedded in this assembly.
+    /// </summary>
     public static PortCatalog LoadEmbedded()
     {
+        PortCatalog library = FromJson(ReadResource("catalog.library.json") ?? "{}");
         PortCatalog generated = FromJson(ReadResource("catalog.ports.json") ?? "{}");
         PortCatalog overrides = FromJson(ReadResource("catalog.ports.overrides.json") ?? "{}");
-        return generated.MergedWith(overrides);
+        return library.MergedWith(generated).MergedWith(overrides);
     }
 
     public static PortCatalog FromJson(string json)

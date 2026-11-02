@@ -39,3 +39,6 @@ Alikins                 https://github.com/alikins/Alikins-rack-plugins         
 Chiptuner               https://github.com/The-Great-Assyr/Chiptuner                  eb902fa6e891f5bb6abb8503c39ddf35a125e03b
 wiqid-anomalies         https://github.com/wiqid/anomalies                            7dd0a1292b101542c11aa179142593474db7127d
 cvly                    https://github.com/Lyqst/cvly-modules                         830fa3c0e92fe134e0b6a5bfa050af1bd0fe061a
+# Newer than the copy Cardinal bundles (Process, …): the scan keeps the newest version of a slug.
+Fundamental             https://github.com/VCVRack/Fundamental                        e0ade9a23a9b41124ea3f4ec9aa2cb0b98c2529e
+HoyerHoppes             https://github.com/jakulley/HoyerHoppes                       823a258093f2582a99eb70bf0f464a7a3c4f7980

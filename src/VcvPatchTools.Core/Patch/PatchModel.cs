@@ -23,6 +23,9 @@ public sealed record PatchModule(long Id, string Plugin, string Model, int Colum
     /// module's single data.label (Aluminium's PadX).
     /// </summary>
     public IReadOnlyList<string> Labels { get; init; } = Array.Empty<string>();
+
+    /// <summary>Module this one receives from without a cable (data.srcId: a Venom Bay Output's source Bay Input), if any.</summary>
+    public long? LinkedSourceId { get; init; }
 }
 
 /// <summary>A port on a module: Output ports are cable sources, Input ports are cable destinations.</summary>

@@ -11,8 +11,19 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - The ports of Aluminium's Fader, Faders2, Faders4, Buttons and PadX take the label typed on their panel, as the module
   itself names them ("Fader 2" becomes "Cutoff").
 - A port tab for a stereo pair reads "L/R send", "L/R Ch 2"… instead of "2 × audio".
+- Every module of the VCV Library is known by name and tags, closed-source ones included (NYSTHI, FLAG, Vult…), so its
+  role and function are no longer guessed. Its ports are still shown by number.
+- Port names for VCV Fundamental's newer modules (Process, Push, Logic, Compare, Gates…) and HoyerHoppes.
+- Venom Bay Input / Bay Output / Bay Norm: the wireless links are drawn as the direct cables they stand for, so the
+  signal path no longer stops at a bay.
+- Info tab: a link to report published modules without port names as a pre-filled GitHub issue.
 
 ### Fixed
+- Limiters, compressors and low-pass gates (Bogaudio LMTR…) are modifiers, not guessed controllers.
+- Modules of a private or not yet published plugin no longer link to a VCV Library page that doesn't exist, and their
+  diagnostic says so instead of pointing at the catalog files.
+- Diagnostics give one line per module and no longer ask to edit `catalog/roles.json`.
+- VCV Fundamental modules use the names of the current release ("ADSR EG"): the copy Cardinal bundles is older.
 - A mixer fed by a single voice whose mix goes back into that voice is part of it, not of the bus: a switch picking
   either the oscillators mixed together or one of them at a time (Moog Matriarch style) keeps both paths in the voice.
 - A docked expander's outputs (Venom's Mix Aux Send) no longer leave from the same spot as its base's outputs with the

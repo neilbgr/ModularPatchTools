@@ -25,8 +25,10 @@ public sealed class PatchAnalyzer
 
     public static PatchAnalyzer CreateDefault() => new PatchAnalyzer(PortCatalog.LoadEmbedded(), RoleCatalog.LoadEmbedded());
 
-    public PatchAnalysis Analyze(PatchDocument patch)
+    public PatchAnalysis Analyze(PatchDocument saved)
     {
+        // Bays and other cable-less links are analyzed as the direct cables they stand for; the saved patch is kept for display.
+        PatchDocument patch = WirelessLinks.Bypass(saved);
         List<string> diagnostics = new List<string>();
         Dictionary<long, PatchModule> byId = ById(patch.Modules);
         Dictionary<long, long> baseOf = ExpanderChains.BaseOf(patch.Modules, ports);
@@ -36,19 +38,27 @@ public sealed class PatchAnalyzer
         Dictionary<long, string> titles = Titles(shown);
 
         Dictionary<long, Role> roleById = new Dictionary<long, Role>();
+        SortedSet<string> missingPortNames = new SortedSet<string>(StringComparer.Ordinal);
         foreach (PatchModule module in shown)
         {
             ModuleInfo info = ports.Get(module.Plugin, module.Model);
-            if (info == ModuleInfo.Empty)
-            {
-                diagnostics.Add($"{titles[module.Id]}: {module.CatalogKey} is not in the port catalog");
-            }
-
             (Role role, bool guessed) = roles.Resolve(module.Plugin, module.Model, info);
             roleById[module.Id] = role;
-            if (guessed)
+
+            // Modules known only by name (VCV Library manifests) or not at all: ports go by number.
+            string? unknownPorts = info.Inputs.Count > 0 || info.Outputs.Count > 0 ? null
+                : info != ModuleInfo.Empty ? $"{module.CatalogKey} has no readable sources"
+                : module.Plugin != "Cardinal" && !VcvLibrary.IsListed(module.Plugin) ? $"{module.CatalogKey} is not in the VCV Library (private or unpublished plugin)"
+                : $"{module.CatalogKey} is not in the catalog yet";
+            if (unknownPorts is not null && VcvLibrary.IsListed(module.Plugin))
             {
-                diagnostics.Add($"{titles[module.Id]}: role guessed as {role} (add {module.CatalogKey} to catalog/roles.json)");
+                missingPortNames.Add(module.CatalogKey);
+            }
+            string? guess = guessed ? $"role guessed as {role} from its name" : null;
+            if (unknownPorts is not null || guess is not null)
+            {
+                string portsNote = unknownPorts is null ? "" : unknownPorts + ": ports shown by number";
+                diagnostics.Add($"{titles[module.Id]}: {string.Join(", ", new[] { portsNote, guess ?? "" }.Where(s => s.Length > 0))}");
             }
         }
 
@@ -117,7 +127,7 @@ public sealed class PatchAnalyzer
         List<List<long>> loops = GraphOrder.Loops(
             shown.Select(m => m.Id).ToList(),
             cables.Where(c => LoopHost(c.Cable.From.ModuleId) != LoopHost(c.Cable.To.ModuleId)).Select(c => (c.Cable.From.ModuleId, c.Cable.To.ModuleId)).ToList());
-        return new PatchAnalysis(patch, modules, cables, voices, diagnostics) { Loops = loops };
+        return new PatchAnalysis(saved, modules, cables, voices, diagnostics) { Loops = loops, MissingPortNames = missingPortNames.ToList() };
     }
 
     /// <summary>

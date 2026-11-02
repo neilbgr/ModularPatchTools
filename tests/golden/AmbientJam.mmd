@@ -10,7 +10,7 @@ flowchart LR
   end
   subgraph b2["Voice 1: LVCO ← ADDR-SEQ"]
     n_m2629565538426473["Random<br/>Fundamental · random"]:::controller
-    n_m8599156609620611["ADSR #3<br/>Bogaudio · envelope"]:::controller
+    n_m8599156609620611["ADSR<br/>Bogaudio · envelope"]:::controller
     n_m2846238014348274["Quantizer<br/>Fundamental · quantizer"]:::pitch
     n_m7521774204900965["LVCO<br/>Bogaudio · oscillator"]:::source
     n_m7411897278716254["VCF #2<br/>SurgeXTRack · filter"]:::modifier
@@ -19,8 +19,8 @@ flowchart LR
     n_m3898654702126135["SLEW<br/>Bogaudio · slew"]:::controller
     n_m5152299461796515["LLFO<br/>Bogaudio · LFO"]:::controller
     n_m4235470771947441["PULSE<br/>Bogaudio · oscillator"]:::source
-    n_m2208446996781428["ADSR #1<br/>Fundamental · envelope"]:::controller
-    n_m6726411345220971["ADSR #2<br/>Fundamental · envelope"]:::controller
+    n_m2208446996781428["ADSR EG #1<br/>Fundamental · envelope"]:::controller
+    n_m6726411345220971["ADSR EG #2<br/>Fundamental · envelope"]:::controller
     n_m6452162562716294["VCF #1<br/>SurgeXTRack · filter"]:::modifier
     n_m8188053117264690["Waveshaper<br/>SurgeXTRack · waveshaper"]:::modifier
     n_m4817828098405391["EQ<br/>Bogaudio · EQ"]:::modifier

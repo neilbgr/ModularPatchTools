@@ -4113,7 +4113,7 @@
       "Envelope generator"
     ],
     "inputs": [
-      "Frequency CV (applies to all oscillators)",
+      "Frequency CV (oscillators with modulation on)",
       "Oscillator 1 activation trigger (mono)",
       "Oscillator 2 activation trigger (mono)",
       "Oscillator 3 activation trigger (mono)",
@@ -22932,7 +22932,7 @@
     ]
   },
   "Fundamental/ADSR": {
-    "name": "ADSR",
+    "name": "ADSR EG",
     "tags": [
       "Envelope Generator",
       "Polyphonic"
@@ -22947,6 +22947,43 @@
     ],
     "outputs": [
       "Envelope"
+    ]
+  },
+  "Fundamental/CVMix": {
+    "name": "CV Mix",
+    "tags": [
+      "Mixer",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "CV 1",
+      "CV 2",
+      "CV 3"
+    ],
+    "outputs": [
+      "Mix"
+    ]
+  },
+  "Fundamental/Compare": {
+    "name": "Compare",
+    "tags": [
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "Maximum",
+      "Minimum",
+      "Clip",
+      "Limit",
+      "Clip gate",
+      "Limit gate",
+      "A\u003EB",
+      "A\u003CB"
     ]
   },
   "Fundamental/Delay": {
@@ -22965,6 +23002,43 @@
     "outputs": [
       "Mix",
       "Wet"
+    ]
+  },
+  "Fundamental/Fade": {
+    "name": "Fade",
+    "tags": [
+      "Panning",
+      "Voltage-controlled amplifier",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Crossfade",
+      "Ch 1",
+      "Ch 2"
+    ],
+    "outputs": [
+      "Ch 1",
+      "Ch 2"
+    ]
+  },
+  "Fundamental/Gates": {
+    "name": "Gates",
+    "tags": [
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Gate length",
+      "Gate",
+      "Reset flip/flop"
+    ],
+    "outputs": [
+      "Rising edge trigger",
+      "Falling edge trigger",
+      "Flip",
+      "Flop",
+      "Gate",
+      "Gate delay"
     ]
   },
   "Fundamental/LFO": {
@@ -23001,6 +23075,27 @@
     ],
     "outputs": [
       "Wavetable"
+    ]
+  },
+  "Fundamental/Logic": {
+    "name": "Logic",
+    "tags": [
+      "Logic",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "A",
+      "B"
+    ],
+    "outputs": [
+      "NOT A",
+      "NOT B",
+      "OR",
+      "NOR",
+      "AND",
+      "NAND",
+      "XOR",
+      "XNOR"
     ]
   },
   "Fundamental/Merge": {
@@ -23043,11 +23138,11 @@
       "Encoder right",
       "Decoder width",
       "Decoder mid",
-      "Decoder sides"
+      "Decoder side"
     ],
     "outputs": [
       "Encoder mid",
-      "Encoder sides",
+      "Encoder side",
       "Decoder left",
       "Decoder right"
     ]
@@ -23068,6 +23163,27 @@
     ],
     "outputs": [
       "Mix"
+    ]
+  },
+  "Fundamental/Mult": {
+    "name": "Mult",
+    "tags": [
+      "Multiple",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Mult"
+    ],
+    "outputs": [
+      "Mult 1",
+      "Mult 2",
+      "Mult 3",
+      "Mult 4",
+      "Mult 5",
+      "Mult 6",
+      "Mult 7",
+      "Mult 8"
     ]
   },
   "Fundamental/Mutes": {
@@ -23131,6 +23247,27 @@
       "Pitch"
     ]
   },
+  "Fundamental/Process": {
+    "name": "Process",
+    "tags": [
+      "Sample and hold",
+      "Slew limiter",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Slew",
+      "Voltage",
+      "Gate"
+    ],
+    "outputs": [
+      "Sample \u0026 hold",
+      "Sample \u0026 hold 2",
+      "Track \u0026 hold",
+      "Hold \u0026 track",
+      "Slew",
+      "Glide"
+    ]
+  },
   "Fundamental/Pulses": {
     "name": "Pulses",
     "tags": [
@@ -23160,6 +23297,20 @@
       "Row 10 gate"
     ]
   },
+  "Fundamental/Push": {
+    "name": "Push",
+    "tags": [
+      "Utility"
+    ],
+    "inputs": [
+      "Hold",
+      "Push"
+    ],
+    "outputs": [
+      "Trigger",
+      "Gate"
+    ]
+  },
   "Fundamental/Quantizer": {
     "name": "Quantizer",
     "tags": [
@@ -23177,10 +23328,11 @@
     "name": "Random",
     "tags": [
       "Random",
-      "Sample and hold"
+      "Sample and hold",
+      "Polyphonic"
     ],
     "inputs": [
-      "Clock rate",
+      "Internal trigger rate",
       "Shape",
       "Trigger",
       "External",
@@ -23193,6 +23345,40 @@
       "Smooth",
       "Exponential",
       "Trigger"
+    ]
+  },
+  "Fundamental/RandomValues": {
+    "name": "Random Values",
+    "tags": [
+      "Random",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Trigger"
+    ],
+    "outputs": [
+      "Random 1",
+      "Random 2",
+      "Random 3",
+      "Random 4",
+      "Random 5",
+      "Random 6",
+      "Random 7"
+    ]
+  },
+  "Fundamental/Rescale": {
+    "name": "Rescale",
+    "tags": [
+      "Attenuator",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "Signal"
+    ],
+    "outputs": [
+      "Signal"
     ]
   },
   "Fundamental/SEQ3": {
@@ -23226,6 +23412,40 @@
       "Reset"
     ]
   },
+  "Fundamental/SHASR": {
+    "name": "Sample \u0026 Hold Analog Shift Register",
+    "tags": [
+      "Sample and hold"
+    ],
+    "inputs": [
+      "Sample 1",
+      "Sample 2",
+      "Sample 3",
+      "Sample 4",
+      "Sample 5",
+      "Sample 6",
+      "Sample 7",
+      "Sample 8",
+      "Trigger 1",
+      "Trigger 2",
+      "Trigger 3",
+      "Trigger 4",
+      "Trigger 5",
+      "Trigger 6",
+      "Trigger 7",
+      "Trigger 8"
+    ],
+    "outputs": [
+      "Sample 1",
+      "Sample 2",
+      "Sample 3",
+      "Sample 4",
+      "Sample 5",
+      "Sample 6",
+      "Sample 7",
+      "Sample 8"
+    ]
+  },
   "Fundamental/Scope": {
     "name": "Scope",
     "tags": [
@@ -23245,6 +23465,7 @@
   "Fundamental/SequentialSwitch1": {
     "name": "Sequential Switch 1 to 4",
     "tags": [
+      "Switch",
       "Utility",
       "Polyphonic"
     ],
@@ -23263,6 +23484,7 @@
   "Fundamental/SequentialSwitch2": {
     "name": "Sequential Switch 4 to 1",
     "tags": [
+      "Switch",
       "Utility",
       "Polyphonic"
     ],
@@ -23317,6 +23539,34 @@
     ],
     "outputs": [
       "Monophonic"
+    ]
+  },
+  "Fundamental/Unity": {
+    "name": "Unity",
+    "tags": [
+      "Mixer",
+      "Utility",
+      "Dual"
+    ],
+    "inputs": [
+      "Channel 1 #1",
+      "Channel 1 #2",
+      "Channel 1 #3",
+      "Channel 1 #4",
+      "Channel 1 #5",
+      "Channel 1 #6",
+      "Channel 2 #1",
+      "Channel 2 #2",
+      "Channel 2 #3",
+      "Channel 2 #4",
+      "Channel 2 #5",
+      "Channel 2 #6"
+    ],
+    "outputs": [
+      "Channel 1 mix",
+      "Channel 1 inverse mix",
+      "Channel 2 mix",
+      "Channel 2 inverse mix"
     ]
   },
   "Fundamental/VCA": {
@@ -23430,6 +23680,17 @@
     "outputs": [
       "Wavetable"
     ]
+  },
+  "Fundamental/Viz": {
+    "name": "Viz",
+    "tags": [
+      "Polyphonic",
+      "Visual"
+    ],
+    "inputs": [
+      "Polyphonic"
+    ],
+    "outputs": []
   },
   "GP/AB4": {
     "name": "AB4",
@@ -26499,6 +26760,137 @@
       "Outtheta",
       "Outx",
       "Outy"
+    ]
+  },
+  "HoyerHoppes/melody_transformer": {
+    "name": "Melody Transformer",
+    "tags": [
+      "Quantizer",
+      "Utility",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "-10 to 10v, white noise normaled in",
+      "-10 to 10v, attenuverted by knob",
+      "-10 to 10v, attenuverted by knob",
+      "expects triggers",
+      "normaled to sample and hold input",
+      "when high, take new sample on clock trigger",
+      "0-5v, overrides knob",
+      "0-5v, overrides knob",
+      "-10 to 10v, overrides knob",
+      "-10 to 10v, overrides knob",
+      "accepts v/oct",
+      "accepts v/oct, ignoring notes outside of active scale"
+    ],
+    "outputs": [
+      "unquantized, but still processed and looped (if applicable)",
+      "all active notes of the scale",
+      "e.g. the root, 3rd, and 5th of the scale",
+      "e.g. the root and 5th of the scale",
+      "e.g. the root of the scale"
+    ]
+  },
+  "HoyerHoppes/phase_driven_multihit_envelope": {
+    "name": "Phase-Driven Multihit Envelope",
+    "tags": [
+      "Envelope generator",
+      "Function generator",
+      "Clock modulator"
+    ],
+    "inputs": [
+      "expects 0-10v",
+      "vca modulated by envelope",
+      "sums with attack parameter",
+      "sums with sustain parameter",
+      "sums with decay parameter",
+      "Space",
+      "bypasses hits parameter",
+      "#8",
+      "#9",
+      "attenuated by phase-\u003Eenv knob"
+    ],
+    "outputs": [
+      "#1",
+      "#2",
+      "#3",
+      "#4"
+    ]
+  },
+  "HoyerHoppes/scanning_clock_multiplier_v2": {
+    "name": "Scanning Clock Multiplier",
+    "tags": [
+      "Clock generator",
+      "Clock modulator",
+      "Envelope generator"
+    ],
+    "inputs": [
+      "expects 0-10v",
+      "#2",
+      "#3",
+      "expects 0-10v",
+      "expects 0-10v",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value",
+      "inverts button value"
+    ],
+    "outputs": [
+      "rate pass-thru",
+      "reset pass-thru",
+      "0-10v phasor based on rate",
+      "trigs calculated by scanner and skew",
+      "phasor calculated by scanner and skew",
+      "reflects scan value around .5",
+      "trigs based on the highest active ratio",
+      "outputs the phase of the highest active ratio",
+      "reflects scan value around .5",
+      "trigs based on the lowest active ratio",
+      "outputs the phase of the lowest active ratio",
+      "trigs based on the ratio active when scan is at noon",
+      "outputs the phase of the ratio active when scan is at noon"
+    ]
+  },
+  "HoyerHoppes/scanning_frequency_division_osc_poly": {
+    "name": "Scanning Frequency Division Oscillator",
+    "tags": [
+      "Oscillator",
+      "Polyphonic"
+    ],
+    "inputs": [
+      "#1",
+      "#2",
+      "use negative voltage to subtract from the knob position",
+      "#4",
+      "#5",
+      "#6",
+      "#7",
+      "#8",
+      "#9",
+      "#10",
+      "#11",
+      "#12",
+      "#13",
+      "#14"
+    ],
+    "outputs": [
+      "#1",
+      "#2",
+      "#3",
+      "#4",
+      "#5"
     ]
   },
   "ImpromptuModular/Adaptive-Quantizer": {

@@ -47,6 +47,20 @@ public class CatalogTests
         Assert.False(guessed);
     }
 
+    [Theory]
+    [InlineData("Limiter")]
+    [InlineData("Compressor")]
+    [InlineData("Dynamics")]
+    [InlineData("Lowpass gate")]
+    public void DynamicsTagsMakeAModifier(string tag)
+    {
+        // Bogaudio LMTR (tags Limiter, Dynamics) used to be guessed a controller.
+        (Role role, bool guessed) = RoleCatalog.FromJson("{}").Resolve("P", "Lmtr", new ModuleInfo(null, new[] { tag, "Polyphonic" }, Array.Empty<string>(), Array.Empty<string>()));
+
+        Assert.Equal(Role.Modifier, role);
+        Assert.False(guessed);
+    }
+
     [Fact]
     public void RoleGuessedFromSlugIsFlagged()
     {

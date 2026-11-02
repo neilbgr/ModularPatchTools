@@ -35,6 +35,17 @@ static int Run(string[] args)
         return CatalogCommand.Build(src, Option(args, "--out") ?? "catalog/ports.json", Option(args, "--report"));
     }
 
+    if (args.Length >= 2 && args[0] == "catalog" && args[1] == "library")
+    {
+        string? manifests = Option(args, "--manifests");
+        if (manifests is null)
+        {
+            PrintUsage();
+            return 1;
+        }
+        return CatalogCommand.Library(manifests, Option(args, "--ports") ?? "catalog/ports.json", Option(args, "--out") ?? "catalog/library.json");
+    }
+
     if (args.Length >= 2 && args[0] == "catalog" && args[1] == "cardinal")
     {
         string? upstream = Option(args, "--upstream");
@@ -150,6 +161,7 @@ static void PrintUsage()
     Console.Error.WriteLine("                   [--scopes[=badge|modules]] [--functions] [--no-ports] [--no-links]");
     Console.Error.WriteLine("    (default: folded overview; group keys are listed by \"info\")");
     Console.Error.WriteLine("  vcvpatch catalog build --src <Cardinal/plugins> [--src <more plugins>…] [--out catalog/ports.json] [--report catalog/scan-report.txt]");
+    Console.Error.WriteLine("  vcvpatch catalog library --manifests <VCVRack/library clone>/manifests [--ports catalog/ports.json] [--out catalog/library.json]");
     Console.Error.WriteLine("  vcvpatch catalog cardinal --upstream <Cardinal tree> --fork <Cardinal tree> [--out catalog/cardinal.json]");
     Console.Error.WriteLine("  vcvpatch --version");
 }
