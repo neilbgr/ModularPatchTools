@@ -54,6 +54,7 @@ public sealed class RoleCatalog
         ("Filter", Role.Modifier),
         ("VCF", Role.Modifier),
         ("Amplifier", Role.Modifier),
+        ("Voltage-controlled amplifier", Role.Modifier),
         ("VCA", Role.Modifier),
         ("Waveshaper", Role.Modifier),
         ("Distortion", Role.Modifier),
@@ -82,6 +83,10 @@ public sealed class RoleCatalog
     public RoleCatalog(IDictionary<string, Role> explicitRoles) => this.explicitRoles = new Dictionary<string, Role>(explicitRoles, StringComparer.Ordinal);
 
     public static RoleCatalog LoadEmbedded() => FromJson(PortCatalog.ReadResource("catalog.roles.json") ?? "{}");
+
+    /// <summary>Explicit roles of <paramref name="overrides"/> on top of these (a user's own modules).</summary>
+    public RoleCatalog MergedWith(IReadOnlyDictionary<string, Role> overrides) =>
+        new RoleCatalog(explicitRoles.Concat(overrides).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Last().Value));
 
     public static RoleCatalog FromJson(string json) =>
         new RoleCatalog(JsonSerializer.Deserialize<Dictionary<string, Role>>(json, jsonOptions) ?? new Dictionary<string, Role>());

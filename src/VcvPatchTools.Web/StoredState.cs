@@ -13,6 +13,9 @@ public static class StoredState
 {
     public const string OptionsKey = "vpd-options";
 
+    /// <summary>The user's own module descriptions (<see cref="Core.Catalog.UserCatalog"/> JSON), shared by every patch.</summary>
+    public const string UserCatalogKey = "vpd-user-catalog";
+
     /// <summary>The display options, remembered from one visit (and one patch) to the next.</summary>
     public sealed record Options(IReadOnlySet<string> HiddenLayers, bool ShowIntents, bool PortTabs, bool FunctionNames, bool LibraryLinks, MonitorView Monitors)
     {

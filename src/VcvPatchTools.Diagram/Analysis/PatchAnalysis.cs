@@ -33,7 +33,16 @@ public sealed record AnalyzedModule(
 
     /// <summary>What it does within its role: filter, VCA, envelope, LFO…</summary>
     public ModuleFunction Function { get; init; }
+
+    /// <summary>Described in the user's own catalog (see <see cref="UserCatalog"/>).</summary>
+    public bool UserDefined { get; init; }
 }
+
+/// <summary>
+/// A module the catalog can't fully explain: ports known only by number, or a role guessed from its name.
+/// Inputs/Outputs: how many ports of each side the patch's cables show at least (highest index used + 1).
+/// </summary>
+public sealed record UncataloguedModule(string Key, string Name, int Inputs, int Outputs, bool PortsUnknown, bool RoleGuessed, bool Published);
 
 /// <param name="Layer">Which teaching layer shows this cable: audio, pitch, modulation or time.</param>
 public sealed record AnalyzedCable(
@@ -87,4 +96,7 @@ public sealed record PatchAnalysis(
 
     /// <summary>"Plugin/Model" of the published modules (VCV Library) whose port names the catalog lacks: worth reporting.</summary>
     public IReadOnlyList<string> MissingPortNames { get; init; } = Array.Empty<string>();
+
+    /// <summary>Modules worth describing in a user catalog, one per "Plugin/Model", in key order.</summary>
+    public IReadOnlyList<UncataloguedModule> Uncatalogued { get; init; } = Array.Empty<UncataloguedModule>();
 }

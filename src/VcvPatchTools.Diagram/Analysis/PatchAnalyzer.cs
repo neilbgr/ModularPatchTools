@@ -15,15 +15,30 @@ public sealed class PatchAnalyzer
     private readonly PortCatalog ports;
     private readonly RoleCatalog roles;
     private readonly SignalClassifier classifier;
+    private readonly IReadOnlySet<string> userDefined;
 
-    public PatchAnalyzer(PortCatalog ports, RoleCatalog roles, SignalClassifier? classifier = null)
+    // Read once: the embedded port catalog is large, and every analyzer built on a user catalog starts from it.
+    private static readonly Lazy<(PortCatalog Ports, RoleCatalog Roles)> embedded =
+        new Lazy<(PortCatalog, RoleCatalog)>(() => (PortCatalog.LoadEmbedded(), RoleCatalog.LoadEmbedded()));
+
+    /// <param name="userDefined">"Plugin/Model" keys the user described: their modules are flagged <see cref="AnalyzedModule.UserDefined"/>.</param>
+    public PatchAnalyzer(PortCatalog ports, RoleCatalog roles, SignalClassifier? classifier = null, IReadOnlySet<string>? userDefined = null)
     {
         this.ports = ports;
         this.roles = roles;
         this.classifier = classifier ?? new SignalClassifier();
+        this.userDefined = userDefined ?? new HashSet<string>();
     }
 
-    public static PatchAnalyzer CreateDefault() => new PatchAnalyzer(PortCatalog.LoadEmbedded(), RoleCatalog.LoadEmbedded());
+    public static PatchAnalyzer CreateDefault() => new PatchAnalyzer(embedded.Value.Ports, embedded.Value.Roles);
+
+    /// <summary>What the embedded catalog knows of each module (no user catalog), to start a user description from.</summary>
+    public static PortCatalog EmbeddedPorts => embedded.Value.Ports;
+
+    /// <summary>The embedded catalog with a user's own module descriptions on top.</summary>
+    public static PatchAnalyzer Create(UserCatalog? user) => user is null || user.Count == 0
+        ? CreateDefault()
+        : new PatchAnalyzer(embedded.Value.Ports.MergedWith(user.Ports), embedded.Value.Roles.MergedWith(user.Roles), userDefined: user.Modules.Keys.ToHashSet(StringComparer.Ordinal));
 
     public PatchAnalysis Analyze(PatchDocument saved)
     {
@@ -39,6 +54,7 @@ public sealed class PatchAnalyzer
 
         Dictionary<long, Role> roleById = new Dictionary<long, Role>();
         SortedSet<string> missingPortNames = new SortedSet<string>(StringComparer.Ordinal);
+        SortedDictionary<string, UncataloguedModule> uncatalogued = new SortedDictionary<string, UncataloguedModule>(StringComparer.Ordinal);
         foreach (PatchModule module in shown)
         {
             ModuleInfo info = ports.Get(module.Plugin, module.Model);
@@ -46,13 +62,22 @@ public sealed class PatchAnalyzer
             roleById[module.Id] = role;
 
             // Modules known only by name (VCV Library manifests) or not at all: ports go by number.
-            string? unknownPorts = info.Inputs.Count > 0 || info.Outputs.Count > 0 ? null
+            // Blank names only (a template imported unfilled) still leave the ports unknown.
+            string? unknownPorts = info.Inputs.Concat(info.Outputs).Any(n => n.Length > 0) ? null
                 : info != ModuleInfo.Empty ? $"{module.CatalogKey} has no readable sources"
                 : module.Plugin != "Cardinal" && !VcvLibrary.IsListed(module.Plugin) ? $"{module.CatalogKey} is not in the VCV Library (private or unpublished plugin)"
                 : $"{module.CatalogKey} is not in the catalog yet";
             if (unknownPorts is not null && VcvLibrary.IsListed(module.Plugin))
             {
                 missingPortNames.Add(module.CatalogKey);
+            }
+            if (unknownPorts is not null || guessed)
+            {
+                int Count(bool output) => saved.Cables.Select(c => output ? c.From : c.To).Where(p => p.ModuleId == module.Id).Select(p => p.PortId + 1).DefaultIfEmpty(0).Max();
+                UncataloguedModule seen = new UncataloguedModule(module.CatalogKey, info.Name ?? module.Model, Count(false), Count(true), unknownPorts is not null, guessed, VcvLibrary.IsListed(module.Plugin));
+                uncatalogued[module.CatalogKey] = uncatalogued.TryGetValue(module.CatalogKey, out UncataloguedModule? other)
+                    ? seen with { Inputs = Math.Max(seen.Inputs, other.Inputs), Outputs = Math.Max(seen.Outputs, other.Outputs) }
+                    : seen;
             }
             string? guess = guessed ? $"role guessed as {role} from its name" : null;
             if (unknownPorts is not null || guess is not null)
@@ -118,6 +143,7 @@ public sealed class PatchAnalyzer
             {
                 Expanders = baseOf.Where(kv => kv.Value == module.Id).Select(kv => ExpanderName(byId[kv.Key])).ToList(),
                 Function = ModuleFunctions.Of(roleById[module.Id], ports.Get(module.Plugin, module.Model).Tags, module.Model, ports.Get(module.Plugin, module.Model).Name),
+                UserDefined = userDefined.Contains(module.CatalogKey),
             });
         }
 
@@ -127,7 +153,7 @@ public sealed class PatchAnalyzer
         List<List<long>> loops = GraphOrder.Loops(
             shown.Select(m => m.Id).ToList(),
             cables.Where(c => LoopHost(c.Cable.From.ModuleId) != LoopHost(c.Cable.To.ModuleId)).Select(c => (c.Cable.From.ModuleId, c.Cable.To.ModuleId)).ToList());
-        return new PatchAnalysis(saved, modules, cables, voices, diagnostics) { Loops = loops, MissingPortNames = missingPortNames.ToList() };
+        return new PatchAnalysis(saved, modules, cables, voices, diagnostics) { Loops = loops, MissingPortNames = missingPortNames.ToList(), Uncatalogued = uncatalogued.Values.ToList() };
     }
 
     /// <summary>

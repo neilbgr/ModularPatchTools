@@ -26,7 +26,7 @@
                 @foreach (Tab t in Enum.GetValues<Tab>())
                 {
                     Tab current = t;
-                    <button role="tab" aria-selected="@(tab == current ? "true" : "false")" class="@(tab == current ? "active" : "")" @onclick="() => tab = current">@current</button>
+                    <button role="tab" aria-selected="@(tab == current ? "true" : "false")" class="@(tab == current ? "active" : "")" @onclick="() => SelectTab(current)">@TabLabel(current)</button>
                 }
             </nav>
         }
@@ -69,6 +69,11 @@
         @if (diagram is not null && tab == Tab.Info)
         {
             <PatchInfoView Analysis="analysis!" Archive="archive!" />
+        }
+
+        @if (diagram is not null && tab == Tab.Modules)
+        {
+            <UserCatalogView Analysis="analysis!" Catalog="userCatalog" CatalogChanged="SetUserCatalogAsync" EditKey="@editKey" />
         }
 
         @if (diagram is not null && tab == Tab.Convert)
@@ -205,6 +210,12 @@
                             </p>
                         }
                         <p class="muted">@string.Join(" · ", selectedNode.Details)</p>
+                        @if (SelectedModuleKey is string moduleKey)
+                        {
+                            <button class="vpd-link describe" @onclick="() => DescribeModule(moduleKey)">
+                                @(userCatalog.Contains(moduleKey) ? "Edit your description of this module" : "Describe this module's ports and role")
+                            </button>
+                        }
                         @if (selectedNode.LibraryKey is string library)
                         {
                             <a class="lib-link" href="@VcvLibrary.PageUrl(library)" target="_blank" rel="noopener">Open in the VCV Library ↗</a>
@@ -266,7 +277,42 @@
     {
         Diagram,
         Info,
+        Modules,
         Convert,
+    }
+
+    // The user's own module descriptions (Modules tab), on top of the embedded catalog, for every patch.
+    private UserCatalog userCatalog = UserCatalog.Empty;
+    // The module the Modules tab opens in its editor, from a module's sheet.
+    private string? editKey;
+
+    private string TabLabel(Tab t) => t == Tab.Modules && analysis?.Uncatalogued.Count(u => u.PortsUnknown) is int count and > 0 ? $"Modules ({count})" : t.ToString();
+
+    private void SelectTab(Tab t)
+    {
+        tab = t;
+        editKey = null;
+    }
+
+    private void DescribeModule(string key)
+    {
+        editKey = key;
+        tab = Tab.Modules;
+    }
+
+    /// <summary>"Plugin/Model" of the selected box when it is a single module (not a folded group, not a stand-in).</summary>
+    private string? SelectedModuleKey =>
+        selectedNode?.ModuleId is long id && analysis is not null && analysis.Modules.Any(m => m.Module.Id == id) ? analysis.Module(id).Module.CatalogKey : null;
+
+    private async Task SetUserCatalogAsync(UserCatalog updated)
+    {
+        userCatalog = updated;
+        await StoreAsync(StoredState.UserCatalogKey, updated.ToJson());
+        if (archive is not null)
+        {
+            analysis = PatchDiagram.Analyze(archive, userCatalog);
+            Relayout();
+        }
     }
     private DiagramLayout? diagram;
     private string? fileTitle;
@@ -299,6 +345,7 @@
             theme = "auto";
         }
         await LoadOptionsAsync();
+        userCatalog = UserCatalog.FromJson(await ReadStoredAsync(StoredState.UserCatalogKey));
         try
         {
             fileFilter = await JS.InvokeAsync<bool>("vpdFinePointer") ? ".vcv" : null;
@@ -408,7 +455,7 @@
         {
             // Decompressed once, for the diagram and the Info and Convert tabs alike.
             PatchArchive read = PatchArchive.Read(bytes);
-            analysis = PatchDiagram.Analyze(read);
+            analysis = PatchDiagram.Analyze(read, userCatalog);
             archive = read;
             patchBytes = bytes;
             this.fileName = fileName;

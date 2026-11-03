@@ -32,6 +32,7 @@ Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](
 - [Getting started](#getting-started)
   - [Web app](#web-app)
   - [Command line](#command-line)
+- [Your own modules](#your-own-modules)
 - [Port catalog and roles](#port-catalog-and-roles)
 - [Project layout](#project-layout)
 - [Development](#development)
@@ -227,8 +228,8 @@ Every cable gets an **intent**, a short sentence for why it's there ("plays the 
 
 - stacked cables on one input (summed by Rack ≥ 2.5, but Cardinal keeps only the first one);
 - cable colors that contradict the port;
-- modules whose role was guessed (to add to `catalog/roles.json`);
-- modules missing from the port catalog;
+- modules whose role was guessed from their name;
+- modules whose ports are only numbered: not in the catalog yet, closed source (known by name from the VCV Library), or from a private or unpublished plugin. The **Info** tab offers to report published ones as a pre-filled GitHub issue, and the **Modules** tab to describe them yourself (see [Your own modules](#your-own-modules));
 - Surge XT modulation inputs with no target.
 
 ## Layout algorithm
@@ -327,7 +328,7 @@ make test
 make web
 ```
 
-Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/VcvPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics and the theme button (system, light or dark). In the **Diagram** tab, one row of tools sits above the diagram:
+Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=modules` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/VcvPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics and the theme button (system, light or dark). In the **Diagram** tab, one row of tools sits above the diagram:
 
 - unfold/fold boxes, or use **Overview** / **Unfold all**;
 - the numbered layer chips, in their cable color: a hidden layer's chip shows every layer up to it, a shown one's hides just that layer;
@@ -335,6 +336,8 @@ Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` t
 - drag the background to pan, Ctrl + wheel to zoom;
 - hover a box to follow its cables, click a module for its details (its real panel from the VCV Library, ports, links, and a note when official Cardinal can't load it) in a sheet at the bottom, click the panel to see it full height, click a cable to edit its intent;
 - **Export** `.html`, `.svg`, `.dot`, `.mmd` or `.json`.
+
+The **Modules** tab describes modules the catalog doesn't know (see [Your own modules](#your-own-modules)); its label counts the modules of the patch whose ports are only numbered.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/module-sheet-dark.png">
@@ -385,6 +388,8 @@ dotnet run --project src/VcvPatchTools.Cli -- <command>
 | `… --functions` | Title boxes by function (`FILTER #1`) |
 | `… --no-ports` | No port tabs on the box edges |
 | `… --no-links` | No VCV Library links on the module boxes |
+| `… --catalog my-modules.json` | (`info` and `diagram`) Add your own module descriptions, see [Your own modules](#your-own-modules); repeatable |
+| `vcvpatch catalog scan --src <plugin folder or .zip> [--out file]` | Write a module catalog for `--catalog` from a plugin's sources |
 | `vcvpatch catalog build --src <Cardinal/plugins>` | Regenerate the port catalog (see below) |
 | `vcvpatch catalog library --manifests <dir>` | Regenerate the names and tags of the VCV Library modules the port catalog lacks (see below) |
 | `vcvpatch catalog cardinal --upstream <dir> --fork <dir>` | Regenerate the list of modules Cardinal loads (see below) |
@@ -393,6 +398,26 @@ dotnet run --project src/VcvPatchTools.Cli -- <command>
 Windows paths are accepted under WSL (`"C:\Users\me\Documents\patch.vcv"` is read from `/mnt/c/...`). Patch files are only read, never modified: a conversion writes a new file. `inspect` and `render`, the commands' former names, still work.
 
 Graphviz: `dot -Tsvg patch.dot > patch.svg`. Mermaid: paste the `.mmd` into any Markdown that supports it (GitHub, GitLab, Obsidian…) or https://mermaid.live.
+
+## Your own modules
+
+A module that neither Cardinal nor the VCV Library knows, such as your own plugin or one not published yet, shows numbered ports (`in#0`) and a role guessed from its name. You can describe it yourself:
+
+- **Web app, Modules tab**: lists the modules of the patch the catalog can't explain. *Describe* opens an editor for the name, role, tags and port names (as Rack shows them when hovering each port, in port order); a module's sheet in the Diagram tab links there too. *Import plugin sources* reads `plugin.json` and the C++ sources (picked files, or a `.zip` of the repository) in the browser and fills every module of the plugin, the same way the catalog itself is built. Descriptions are kept in the browser and apply to every patch. *Export catalog* saves them as a file to keep or share, *Import catalog* reads one back. *What can I import?* explains both imports and offers a commented template, with an entry for each module of the patch the catalog can't explain.
+- **CLI**: `vcvpatch catalog scan --src MyPlugin` writes `MyPlugin.modules.json`; pass it to `info` or `diagram` with `--catalog`.
+
+The file has the layout of `catalog/ports.overrides.json`, with an optional role (`Time`, `Pitch`, `Controller`, `Source`, `Modifier`, `Effect`, `Mixer`, `Io`, `Performance`, `Monitor`, `Router`):
+
+```json
+{
+  "MyPlugin/MyOsc": {
+    "name": "My Osc", "tags": ["Oscillator"], "role": "Source",
+    "inputs": ["V/Oct", "FM", "Sync"], "outputs": ["Sine", "Square", "Saw"]
+  }
+}
+```
+
+Your descriptions win over the embedded catalog. A file or a `.zip` from someone else is only ever read as text, never run: sizes are capped (1 MB per catalog, 64 MB of sources), control and bidirectional-override characters are removed from every name, and every name is escaped in the exports.
 
 ## Port catalog and roles
 

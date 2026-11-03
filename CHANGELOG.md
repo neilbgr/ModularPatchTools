@@ -17,6 +17,12 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - Venom Bay Input / Bay Output / Bay Norm: the wireless links are drawn as the direct cables they stand for, so the
   signal path no longer stops at a bay.
 - Info tab: a link to report published modules without port names as a pre-filled GitHub issue.
+- Modules tab: describe the modules the catalog doesn't know (your own plugin, one not published yet), with their name,
+  role, tags and port names, or import them from the plugin's sources (files or a .zip of the repository), read in the
+  browser. Descriptions are kept in the browser, and can be exported and imported as a JSON file; a commented template
+  holds an entry for each unknown module of the patch.
+- CLI: `--catalog <file>` adds your own module descriptions to `info` and `diagram`; `catalog scan --src <plugin>` writes
+  such a file from a plugin's sources.
 
 ### Fixed
 - Limiters, compressors and low-pass gates (Bogaudio LMTR…) are modifiers, not guessed controllers.

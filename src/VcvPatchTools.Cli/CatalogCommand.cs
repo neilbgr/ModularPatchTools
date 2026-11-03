@@ -245,6 +245,57 @@ internal static class CatalogCommand
         return 0;
     }
 
+    /// <summary>
+    /// "catalog scan": one plugin's modules (a folder or a .zip of it) as a user catalog, for "--catalog": the way to
+    /// describe a plugin that neither Cardinal nor the VCV Library has, without touching catalog/.
+    /// </summary>
+    public static int Scan(string source, string? outputPath)
+    {
+        string path = InputPath.Resolve(source);
+        List<PluginFile> files;
+        if (File.Exists(path))
+        {
+            files = new List<PluginFile> { new PluginFile(Path.GetFileName(path), File.ReadAllBytes(path)) };
+        }
+        else if (Directory.Exists(path))
+        {
+            // Build output and git data are never sources.
+            string[] skipped = { ".git", "build", "dist" };
+            files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
+                .Select(p => (Full: p, Relative: Path.GetRelativePath(path, p).Replace('\\', '/')))
+                .Where(f => !skipped.Any(s => f.Relative.StartsWith(s + "/", StringComparison.Ordinal))
+                    && (Path.GetFileName(f.Relative) == "plugin.json" || IsSource(f.Relative) || IsHeader(f.Relative)))
+                .Select(f => new PluginFile(f.Relative, File.ReadAllBytes(f.Full)))
+                .ToList();
+        }
+        else
+        {
+            Console.Error.WriteLine($"Plugin folder or .zip not found: {path}");
+            return 1;
+        }
+
+        PluginScan scan = PluginSources.Scan(files);
+        foreach (string problem in scan.Problems)
+        {
+            Console.Error.WriteLine(problem);
+        }
+        if (scan.Plugin is null)
+        {
+            return 1;
+        }
+        // The slug comes from the plugin.json read: only its file-name-safe characters make the default name ("../x" can't escape).
+        outputPath ??= $"{SafeFileName(scan.Plugin)}.modules.json";
+        File.WriteAllText(outputPath, new UserCatalog(PluginSources.ToUserCatalog(scan).Modules).ToJson());
+        Console.WriteLine($"{scan.Plugin}: {scan.Modules.Count} modules → {outputPath} (use it with --catalog)");
+        return 0;
+    }
+
+    internal static string SafeFileName(string text)
+    {
+        string safe = new string(text.Select(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' ? c : '_').ToArray()).Trim('_');
+        return safe.Length > 0 ? safe[..Math.Min(safe.Length, 64)] : "plugin";
+    }
+
     public static int Cardinal(string upstreamRoot, string forkRoot, string outputPath)
     {
         CardinalScan? upstream = ScanCardinal(upstreamRoot);

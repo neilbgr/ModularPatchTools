@@ -1,0 +1,316 @@
+@inject IJSRuntime JS
+
+@* The user's own module descriptions: for modules neither the catalog nor the VCV Library can name (a plugin of
+   their own, one not published yet). Kept in this browser; the file can be exported to keep or share it. *@
+
+<div class="vpd-modules">
+    <p class="lead">Describe the modules the catalog doesn't know, such as your own plugin or one not published yet: their ports get names and the diagram places them by their role. Descriptions stay in this browser and apply to every patch. Export them to keep or share them.</p>
+
+    <div class="vpd-toolbar">
+        <label class="file-button" title="plugin.json and the C++ sources of a plugin, or a .zip of its repository">
+            @(scanning ? "Reading…" : "Import plugin sources")
+            <InputFile OnChange="ImportSourcesAsync" multiple accept=".json,.cpp,.cc,.hpp,.hh,.h,.zip" disabled="@scanning" />
+        </label>
+        <label class="file-button" title="A module catalog exported from here, or written by hand">
+            Import catalog
+            <InputFile OnChange="ImportCatalogAsync" accept=".json" />
+        </label>
+        <button disabled="@(Catalog.Count == 0)" @onclick="ExportAsync">Export catalog</button>
+    </div>
+
+    <details class="vpd-help">
+        <summary>What can I import?</summary>
+        <p><strong>Import plugin sources</strong> reads the plugin itself, nothing to write: its <code>plugin.json</code> (the manifest every Rack plugin has, from the Rack SDK) and its C++ sources (<code>.cpp</code>, <code>.hpp</code>…). Pick those files together, or a <code>.zip</code> of the whole repository (GitHub's <em>Code › Download ZIP</em>). Port names are read from the <code>configInput</code> / <code>configOutput</code> calls, the way the catalog itself is built. The files are read in this browser and never uploaded anywhere.</p>
+        <p><strong>Import catalog</strong> reads a module catalog: one exported from here, or written by hand. Download a template to start one: it explains the format and holds an entry for each module of this patch the catalog can't explain, with as many ports as its cables use.</p>
+        <button @onclick="DownloadTemplateAsync">Download a template</button>
+    </details>
+
+    @if (message is not null)
+    {
+        <div class="vpd-notice @(problems.Count > 0 ? "warn" : "")">
+            <p>@message</p>
+            @if (problems.Count > 0)
+            {
+                <details>
+                    <summary>@problems.Count @(problems.Count == 1 ? "note" : "notes")</summary>
+                    <ul class="vpd-diag">
+                        @foreach (string problem in problems)
+                        {
+                            <li>@problem</li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+    }
+
+    @if (draft is not null)
+    {
+        <form class="module-editor" @onsubmit="SaveAsync" @onsubmit:preventDefault="true">
+            <h2>@draft.Key</h2>
+            <div class="fields">
+                <label>Name <input type="text" @bind="draft.Name" placeholder="@draft.Key.Split('/')[1]" /></label>
+                <label>Role
+                    <select @bind="RoleChoice">
+                        <option value="">Catalog's choice (its tags)</option>
+                        @foreach (Role role in Enum.GetValues<Role>())
+                        {
+                            <option value="@role">@SvgRenderer.RoleLabel(role)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <details class="tags" open="@(draft.Tags.Count == 0)">
+                <summary>Tags: @(draft.Tags.Count == 0 ? "none" : string.Join(", ", RackTags.All.Where(draft.Tags.Contains)))</summary>
+                <div class="tag-grid">
+                    @foreach (string tag in RackTags.All)
+                    {
+                        string t = tag;
+                        <label><input type="checkbox" checked="@draft.Tags.Contains(t)" @onchange="e => ToggleTag(t, (bool)e.Value!)" /> @t</label>
+                    }
+                </div>
+            </details>
+            <div class="port-lists">
+                @foreach (bool output in new[] { false, true })
+                {
+                    bool side = output;
+                    List<string> ports = output ? draft.Outputs : draft.Inputs;
+                    <fieldset>
+                        <legend>@(output ? "Outputs" : "Inputs")</legend>
+                        <p class="muted">Names as Rack shows them when hovering each port, in the module's port order.</p>
+                        <ol>
+                            @for (int i = 0; i < ports.Count; i++)
+                            {
+                                int index = i;
+                                <li><input type="text" value="@ports[index]" placeholder="#@(index + 1)" aria-label="@(output ? "Output" : "Input") @(index + 1)" @onchange="e => ports[index] = (string?)e.Value ?? string.Empty" /></li>
+                            }
+                        </ol>
+                        <button type="button" @onclick="() => ports.Add(string.Empty)">Add</button>
+                        <button type="button" disabled="@(ports.Count == 0)" @onclick="() => ports.RemoveAt(ports.Count - 1)">Remove last</button>
+                    </fieldset>
+                }
+            </div>
+            <div class="actions">
+                <button type="submit" class="primary">Save</button>
+                <button type="button" @onclick="() => draft = null">Cancel</button>
+            </div>
+        </form>
+    }
+
+    @if (Analysis.Uncatalogued.Count > 0)
+    {
+        <h2>In this patch</h2>
+        <table>
+            <thead><tr><th>Module</th><th>What's missing</th><th></th></tr></thead>
+            <tbody>
+                @foreach (UncataloguedModule module in Analysis.Uncatalogued)
+                {
+                    UncataloguedModule m = module;
+                    <tr>
+                        <td>@m.Name <span class="muted">@m.Key</span></td>
+                        <td>@Missing(m)</td>
+                        <td><button class="vpd-link" @onclick="() => Edit(m.Key)">@(Catalog.Contains(m.Key) ? "Edit" : "Describe")</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (Catalog.Count == 0)
+    {
+        <p class="muted">Every module of this patch is in the catalog.</p>
+    }
+
+    @if (Catalog.Count > 0)
+    {
+        <h2>Your modules</h2>
+        <table>
+            <thead><tr><th>Module</th><th>Role</th><th>Ports</th><th></th></tr></thead>
+            <tbody>
+                @foreach ((string key, UserModule module) in Catalog.Modules)
+                {
+                    string k = key;
+                    <tr class="@(inPatch.Contains(k) ? "in-patch" : "")">
+                        <td>@(module.Name ?? k.Split('/')[1]) <span class="muted">@k</span></td>
+                        <td>@(module.Role is Role role ? SvgRenderer.RoleLabel(role) : "catalog's choice")</td>
+                        <td>@module.Inputs.Count in, @module.Outputs.Count out</td>
+                        <td>
+                            <button class="vpd-link" @onclick="() => Edit(k)">Edit</button>
+                            <button class="vpd-link" @onclick="() => RemoveAsync(k)">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PatchAnalysis Analysis { get; set; } = default!;
+
+    [Parameter, EditorRequired] public UserCatalog Catalog { get; set; } = default!;
+
+    [Parameter] public EventCallback<UserCatalog> CatalogChanged { get; set; }
+
+    /// <summary>A module to open in the editor (from a module's sheet in the Diagram tab).</summary>
+    [Parameter] public string? EditKey { get; set; }
+
+    private ModuleDraft? draft;
+    private string? openedFor;
+    private string? message;
+    private List<string> problems = new List<string>();
+    private bool scanning;
+    private HashSet<string> inPatch = new HashSet<string>();
+
+    protected override void OnParametersSet()
+    {
+        inPatch = Analysis.Patch.Modules.Select(m => m.CatalogKey).ToHashSet(StringComparer.Ordinal);
+        if (EditKey is null)
+        {
+            openedFor = null;
+        }
+        else if (EditKey != openedFor)
+        {
+            openedFor = EditKey;
+            Edit(EditKey);
+        }
+    }
+
+    private string RoleChoice
+    {
+        get => draft?.Role?.ToString() ?? "";
+        set
+        {
+            if (draft is not null)
+            {
+                draft.Role = Enum.TryParse(value, out Role role) ? role : null;
+            }
+        }
+    }
+
+    private static string Missing(UncataloguedModule m) => string.Join(", ", new[]
+    {
+        m.PortsUnknown ? (m.Published ? "port names (closed source)" : "port names (not in the VCV Library)") : null,
+        m.RoleGuessed ? "role (guessed from its name)" : null,
+    }.OfType<string>());
+
+    private void Edit(string key)
+    {
+        UncataloguedModule? seen = Analysis.Uncatalogued.FirstOrDefault(u => u.Key == key);
+        int Seen(bool output) => Analysis.Patch.Cables.Select(c => output ? c.From : c.To)
+            .Where(p => Analysis.Patch.Modules.Any(m => m.Id == p.ModuleId && m.CatalogKey == key)).Select(p => p.PortId + 1).DefaultIfEmpty(0).Max();
+        string[] parts = key.Split('/');
+        draft = new ModuleDraft(key, Catalog.Modules.GetValueOrDefault(key), PatchAnalyzer.EmbeddedPorts.Get(parts[0], parts[1]),
+            seen?.Inputs ?? Seen(false), seen?.Outputs ?? Seen(true));
+        message = null;
+    }
+
+    private void ToggleTag(string tag, bool on)
+    {
+        if (on)
+        {
+            draft?.Tags.Add(tag);
+        }
+        else
+        {
+            draft?.Tags.Remove(tag);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (draft is null)
+        {
+            return;
+        }
+        string key = draft.Key;
+        UserCatalog updated = Catalog.With(key, draft.ToUserModule());
+        draft = null;
+        Show($"{key} saved.", Array.Empty<string>());
+        await CatalogChanged.InvokeAsync(updated);
+    }
+
+    private async Task RemoveAsync(string key)
+    {
+        if (draft?.Key == key)
+        {
+            draft = null;
+        }
+        Show($"{key} removed: the catalog describes it again.", Array.Empty<string>());
+        await CatalogChanged.InvokeAsync(Catalog.Without(key));
+    }
+
+    private async Task ImportSourcesAsync(InputFileChangeEventArgs e)
+    {
+        scanning = true;
+        try
+        {
+            List<PluginFile> files = new List<PluginFile>();
+            IReadOnlyList<IBrowserFile> picked = e.GetMultipleFiles(2000);
+            if (picked.Sum(f => f.Size) > PluginSources.MaxSourceBytes)
+            {
+                Show($"More than {PluginSources.MaxSourceBytes / (1024 * 1024)} MB of files: pick the plugin.json and the src folder's files, or a .zip of the repository.", Array.Empty<string>());
+                return;
+            }
+            foreach (IBrowserFile file in picked)
+            {
+                byte[] bytes = new byte[file.Size];
+                await using Stream stream = file.OpenReadStream(PluginSources.MaxSourceBytes);
+                await stream.ReadExactlyAsync(bytes);
+                files.Add(new PluginFile(file.Name, bytes));
+            }
+            // Let the "Reading…" label show before the scan holds the browser's only thread.
+            StateHasChanged();
+            await Task.Yield();
+            PluginScan scan = PluginSources.Scan(files);
+            if (scan.Plugin is null)
+            {
+                Show("Nothing imported.", scan.Problems);
+                return;
+            }
+            // A role set by hand stays: the sources only know names, tags and ports.
+            UserCatalog scanned = new UserCatalog(PluginSources.ToUserCatalog(scan).Modules.Select(kv =>
+                new KeyValuePair<string, UserModule>(kv.Key, kv.Value with { Role = Catalog.Modules.GetValueOrDefault(kv.Key)?.Role })));
+            Show($"{scan.Plugin}: {scan.Modules.Count} {(scan.Modules.Count == 1 ? "module" : "modules")} read from the sources.", scan.Problems);
+            await CatalogChanged.InvokeAsync(Catalog.MergedWith(scanned));
+        }
+        catch (IOException ex)
+        {
+            Show($"The files couldn't be read: {ex.Message}", Array.Empty<string>());
+        }
+        finally
+        {
+            scanning = false;
+        }
+    }
+
+    private async Task ImportCatalogAsync(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            // Refused past the size a catalog may have (OpenReadStream throws an IOException beyond it).
+            await using Stream stream = e.File.OpenReadStream(UserCatalog.MaxJsonLength * 4L);
+            using StreamReader reader = new StreamReader(stream);
+            UserCatalog read = UserCatalog.FromJson(await reader.ReadToEndAsync());
+            Show($"{UserCatalog.Printable(e.File.Name)}: {read.Count} {(read.Count == 1 ? "module" : "modules")} imported.", read.Problems);
+            if (read.Count > 0)
+            {
+                await CatalogChanged.InvokeAsync(Catalog.MergedWith(new UserCatalog(read.Modules)));
+            }
+        }
+        catch (IOException ex)
+        {
+            Show($"{UserCatalog.Printable(e.File.Name)} couldn't be read: {ex.Message}", Array.Empty<string>());
+        }
+    }
+
+    private async Task DownloadTemplateAsync() =>
+        await JS.InvokeVoidAsync("vpdDownload", "modules-template.json", "application/json", CatalogTemplate.Json(Analysis.Uncatalogued, PatchAnalyzer.EmbeddedPorts));
+
+    private async Task ExportAsync() => await JS.InvokeVoidAsync("vpdDownload", "my-modules.json", "application/json", Catalog.ToJson());
+
+    private void Show(string text, IReadOnlyList<string> notes)
+    {
+        message = text;
+        problems = notes.ToList();
+    }
+}

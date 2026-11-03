@@ -1,5 +1,6 @@
 ﻿using VcvPatchTools.Cli;
 using VcvPatchTools.Core;
+using VcvPatchTools.Core.Catalog;
 using VcvPatchTools.Core.Patch;
 using VcvPatchTools.Diagram;
 using VcvPatchTools.Diagram.Analysis;
@@ -35,6 +36,17 @@ static int Run(string[] args)
         return CatalogCommand.Build(src, Option(args, "--out") ?? "catalog/ports.json", Option(args, "--report"));
     }
 
+    if (args.Length >= 2 && args[0] == "catalog" && args[1] == "scan")
+    {
+        string? plugin = Option(args, "--src");
+        if (plugin is null)
+        {
+            PrintUsage();
+            return 1;
+        }
+        return CatalogCommand.Scan(plugin, Option(args, "--out"));
+    }
+
     if (args.Length >= 2 && args[0] == "catalog" && args[1] == "library")
     {
         string? manifests = Option(args, "--manifests");
@@ -61,7 +73,7 @@ static int Run(string[] args)
     // "inspect" and "render" are the names these had in vcvdiagram.
     if (args.Length >= 2 && args[0] is "info" or "inspect")
     {
-        return Info(args[1]);
+        return Info(args[1], args);
     }
 
     if (args.Length >= 1 && args[0] == "convert")
@@ -89,7 +101,7 @@ static int Render(string[] args)
         return 1;
     }
 
-    PatchAnalysis? analysis = Load(path);
+    PatchAnalysis? analysis = Load(path, args);
     if (analysis is null)
     {
         return 1;
@@ -114,19 +126,42 @@ static int Render(string[] args)
     return 0;
 }
 
-static int Info(string rawPath)
+static int Info(string rawPath, string[] args)
 {
     byte[]? bytes = Read(rawPath);
-    if (bytes is null)
+    if (bytes is null || UserCatalogs(args) is not UserCatalog user)
     {
         return 1;
     }
     ConvertCommand.WriteOrigin(PatchArchive.Read(bytes), Console.Out);
     Console.WriteLine();
-    return InspectCommand.Run(PatchDiagram.Analyze(bytes), Console.Out);
+    return InspectCommand.Run(PatchDiagram.Analyze(bytes, user), Console.Out);
 }
 
-static PatchAnalysis? Load(string rawPath) => Read(rawPath) is byte[] bytes ? PatchDiagram.Analyze(bytes) : null;
+static PatchAnalysis? Load(string rawPath, string[] args) =>
+    Read(rawPath) is byte[] bytes && UserCatalogs(args) is UserCatalog user ? PatchDiagram.Analyze(bytes, user) : null;
+
+// --catalog my-modules.json, repeatable: the user's own module descriptions, later files winning.
+static UserCatalog? UserCatalogs(string[] args)
+{
+    UserCatalog merged = UserCatalog.Empty;
+    foreach (string option in Options(args, "--catalog"))
+    {
+        string path = InputPath.Resolve(option);
+        if (!File.Exists(path))
+        {
+            Console.Error.WriteLine($"Catalog not found: {path}");
+            return null;
+        }
+        UserCatalog read = UserCatalog.FromJson(File.ReadAllText(path));
+        foreach (string problem in read.Problems)
+        {
+            Console.Error.WriteLine($"{Path.GetFileName(path)}: {problem}");
+        }
+        merged = merged.MergedWith(new UserCatalog(read.Modules));
+    }
+    return merged;
+}
 
 static byte[]? Read(string rawPath)
 {
@@ -161,6 +196,7 @@ static void PrintUsage()
     Console.Error.WriteLine("                   [--scopes[=badge|modules]] [--functions] [--no-ports] [--no-links]");
     Console.Error.WriteLine("    (default: folded overview; group keys are listed by \"info\")");
     Console.Error.WriteLine("  vcvpatch catalog build --src <Cardinal/plugins> [--src <more plugins>…] [--out catalog/ports.json] [--report catalog/scan-report.txt]");
+    Console.Error.WriteLine("  vcvpatch catalog scan --src <plugin folder or .zip> [--out my-modules.json]   (a user catalog, for --catalog)");
     Console.Error.WriteLine("  vcvpatch catalog library --manifests <VCVRack/library clone>/manifests [--ports catalog/ports.json] [--out catalog/library.json]");
     Console.Error.WriteLine("  vcvpatch catalog cardinal --upstream <Cardinal tree> --fork <Cardinal tree> [--out catalog/cardinal.json]");
     Console.Error.WriteLine("  vcvpatch --version");
