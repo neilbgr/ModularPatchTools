@@ -311,7 +311,6 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-modules .vpd-help { max-width: 760px; margin: 0 0 12px; }
 .vpd-modules .vpd-help summary { cursor: pointer; color: var(--vpd-gate); }
 .vpd-modules .vpd-help p { margin: 6px 0; }
-.vpd-modules .vpd-help button { font: inherit; padding: 4px 10px; border-radius: 5px; }
 .vpd-modules .vpd-notice.warn { border-left-color: var(--vpd-audio); }
 .vpd-modules .vpd-notice summary { cursor: pointer; color: var(--vpd-muted); }
 .module-editor { margin: 6px 0 14px; padding: 12px 14px; background: var(--vpd-panel); border: 1px solid var(--vpd-line); border-radius: 8px; }
@@ -328,7 +327,9 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .module-editor ol { margin: 0 0 8px; padding-left: 2.2em; }
 .module-editor ol li { margin: 2px 0; }
 .module-editor ol input[type=text] { width: 100%; }
-.module-editor button { font: inherit; padding: 4px 10px; border-radius: 5px; }
+.module-editor button, .vpd-modules .vpd-help button { font: inherit; padding: 4px 10px; border-radius: 5px; border: 1px solid var(--vpd-line); background: var(--vpd-bg); color: var(--vpd-ink); cursor: pointer; }
+.module-editor button:hover:not(:disabled), .vpd-modules .vpd-help button:hover { border-color: var(--vpd-muted); }
+.module-editor button:disabled { opacity: .5; cursor: default; }
 .module-editor .actions { display: flex; gap: 8px; margin-top: 12px; }
 .module-editor .actions .primary { font-weight: 600; }
 .vpd-panel .describe { display: block; margin: 0 0 8px; text-align: left; }

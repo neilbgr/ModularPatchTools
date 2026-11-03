@@ -5,11 +5,11 @@ Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](
 **Try it online: [neilbgr.github.io/VcvPatchTools](https://neilbgr.github.io/VcvPatchTools/)**. Drop a `.vcv` file on the page, or open the sample patch. The patch is read in your browser and never uploaded.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
-  <img alt="Folded overview of a patch: performance, sequencing, two voices and the mix bus, linked by typed cables" src="docs/screenshots/overview-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-app-dark.png">
+  <img alt="The web app: a patch's diagram under the Diagram, Info, Modules and Convert tabs, with its layer, view, export and zoom controls" src="docs/screenshots/web-app-light.png">
 </picture>
 
-*A 22-module patch, folded into its main blocks: who plays it, what sequences it, the two voices and the mix bus.*
+*The web app on a 22-module patch, folded into its main blocks: who plays it, what sequences it, the two voices and the mix bus. Click a block to unfold it.*
 
 ## Contents
 
@@ -73,62 +73,18 @@ It comes as:
 
 All of them share the same C# libraries, so they always read, convert and draw a patch the same way.
 
-In the web app, switch between the **Diagram**, **Info** and **Convert** tabs.
+In the web app, switch between the **Diagram**, **Info**, **Modules** and **Convert** tabs.
 
 ## What the diagram shows
 
-Here is the folded overview of a small ambient patch, exported to Mermaid (GitHub renders it):
+Here is the folded overview of a small ambient patch, as the exported HTML page draws it:
 
-```mermaid
-flowchart LR
-  subgraph b0["Performance (MIDI, host, played live)"]
-    n_g_external["Played live<br/>Host MIDI, Host MIDI CC, Host MIDI Gate"]:::performance
-  end
-  subgraph b1["Time & sequencing"]
-    n_g_time["Sequencing<br/>Clkd, ADDR-SEQ"]:::time
-  end
-  subgraph b2["Voice 1"]
-    n_g_voice_1["LVCO ← ADDR-SEQ<br/>VCF #2 · +3 mod"]:::source
-  end
-  subgraph b3["Voice 2"]
-    n_g_voice_2["PULSE ← Host MIDI<br/>VCF #1 → Waveshaper → EQ · +4 mod"]:::source
-  end
-  subgraph b4["Mix & effects"]
-    n_g_bus["Mix & effects<br/>MIX4, Plateau, Delay Plus Stereo Fx, Audio 2"]:::mixer
-  end
-  n_g_voice_1 ==>|"into MIX4"| n_g_bus
-  n_g_external -.->|"4 × gate / trig / clock"| n_g_voice_2
-  n_g_external -->|"2 × modulation"| n_g_voice_2
-  n_g_time -->|"plays the notes"| n_g_voice_1
-  n_g_time -.->|"2 × gate / trig / clock"| n_g_voice_1
-  n_g_external -->|"hand control of frequency & pre-filter gain"| n_g_voice_1
-  n_g_voice_1 -->|"Random moves channel 2 pan cv"| n_g_bus
-  n_g_external -.->|"3 × gate / trig / clock"| n_g_time
-  n_g_external -->|"3 × pitch"| n_g_voice_2
-  n_g_voice_2 ==>|"into MIX4"| n_g_bus
-  linkStyle 0 stroke:#d64545
-  linkStyle 1 stroke:#2f74c4
-  linkStyle 2 stroke:#2c9457
-  linkStyle 3 stroke:#b97d00
-  linkStyle 4 stroke:#2f74c4
-  linkStyle 5 stroke:#2c9457
-  linkStyle 6 stroke:#2c9457
-  linkStyle 7 stroke:#2f74c4
-  linkStyle 8 stroke:#b97d00
-  linkStyle 9 stroke:#d64545
-  classDef time stroke:#2f74c4,stroke-width:2px
-  classDef pitch stroke:#b97d00,stroke-width:2px
-  classDef controller stroke:#2c9457,stroke-width:2px
-  classDef source stroke:#d64545,stroke-width:2px
-  classDef modifier stroke:#c2611f,stroke-width:2px
-  classDef mixer stroke:#7a52b3,stroke-width:2px
-  classDef effect stroke:#b0479a,stroke-width:2px
-  classDef io stroke:#6b6b70,stroke-width:2px
-  classDef performance stroke:#138a8a,stroke-width:2px
-  classDef monitor stroke:#9a958a,stroke-width:1px,stroke-dasharray:2 3
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
+  <img alt="Folded overview of a patch: performance, sequencing, two voices and the mix bus, linked by typed cables" src="docs/screenshots/overview-light.png">
+</picture>
 
-The HTML page and the web app draw the same thing with more detail: orthogonal "metro map" lines, layers you switch on one by one, and boxes you unfold.
+Orthogonal "metro map" lines, layers you switch on one by one, and boxes you unfold: the web app and the HTML page draw it the same way. The other exports are simpler (see [Command line](#command-line)).
 
 ### Bands (rows), by role
 
@@ -209,7 +165,7 @@ Click a box (web app) to unfold it into its modules, in a lane of its own. The C
 - **Surge XT modulation**: Surge XT modules have "Modulation Signal n" inputs that can be assigned to any knob. The tool reads which knob each input moves and by how much (`Mod 1 → Cutoff +35%`), or reports when an input moves nothing.
 - **MIDI learn**: the cells of MIDI gate and CC modules (Rack's MIDI to Gate / MIDI CC to CV and their CV to MIDI counterparts, Cardinal's Host MIDI Gate / CC) are named by the note or controller they learned in the patch: `Gate 13 · A2`, `Cell 2 · CC 74 (cutoff)`.
 - **Typed labels**: the ports of Aluminium's Fader, Faders2, Faders4, Buttons and PadX take the label typed on their panel, as the module itself names them: `Fader 2` becomes `Cutoff`, PadX's `Lane 3` becomes `Drums 3`.
-- **Scopes and displays** are hidden by default (they explain nothing about the sound). "Scopes & displays" shows them as a 👁 badge on the box they watch, or as boxes in a column on the right, each next to what it watches, with thin dashed cables.
+- **Scopes and displays** show by default as boxes in a column on the right, each next to what it watches, with thin dashed cables. "Scopes & displays" can show them instead as a 👁 badge on the box they watch, or hide them (they explain nothing about the sound). The command line leaves them out unless asked (`--scopes`).
 
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/scopes-dark.png">
@@ -353,11 +309,6 @@ A click on the panel shows it full height; Escape or a click outside closes it.
 
 On a phone or tablet (portrait or landscape), the diagram fills the screen and opens fitted to its width. Drag with a finger anywhere to pan and pinch to zoom. Tap a module box for its ports, details, panel and VCV Library link; tap a library icon once to see the panel, twice to open the page. The exported `.html` page pans, pinches and previews panels the same way.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-app-dark.png">
-  <img alt="The web app: drop zone, Diagram / Info / Convert tabs, view, layer, export and zoom controls above the diagram" src="docs/screenshots/web-app-light.png">
-</picture>
-
 The **Info** tab tells what the patch is (format, Rack or Cardinal, the Rack version that saved it) and lists every module with its plugin, role and function, linked to its VCV Library page, and whether Cardinal can load it. The **Convert** tab converts it to the other application and downloads the result, or opens it in the app.
 
 <picture>
@@ -399,12 +350,71 @@ Windows paths are accepted under WSL (`"C:\Users\me\Documents\patch.vcv"` is rea
 
 Graphviz: `dot -Tsvg patch.dot > patch.svg`. Mermaid: paste the `.mmd` into any Markdown that supports it (GitHub, GitLab, Obsidian…) or https://mermaid.live.
 
+<details>
+<summary>Example: the same folded overview, exported to Mermaid (GitHub renders it)</summary>
+
+```mermaid
+flowchart LR
+  subgraph b0["Performance (MIDI, host, played live)"]
+    n_g_external["Played live<br/>Host MIDI, Host MIDI CC, Host MIDI Gate"]:::performance
+  end
+  subgraph b1["Time & sequencing"]
+    n_g_time["Sequencing<br/>Clkd, ADDR-SEQ"]:::time
+  end
+  subgraph b2["Voice 1"]
+    n_g_voice_1["LVCO ← ADDR-SEQ<br/>VCF #2 · +3 mod"]:::source
+  end
+  subgraph b3["Voice 2"]
+    n_g_voice_2["PULSE ← Host MIDI<br/>VCF #1 → Waveshaper → EQ · +4 mod"]:::source
+  end
+  subgraph b4["Mix & effects"]
+    n_g_bus["Mix & effects<br/>MIX4, Plateau, Delay Plus Stereo Fx, Audio 2"]:::mixer
+  end
+  n_g_voice_1 ==>|"into MIX4"| n_g_bus
+  n_g_external -.->|"4 × gate / trig / clock"| n_g_voice_2
+  n_g_external -->|"2 × modulation"| n_g_voice_2
+  n_g_time -->|"plays the notes"| n_g_voice_1
+  n_g_time -.->|"2 × gate / trig / clock"| n_g_voice_1
+  n_g_external -->|"hand control of frequency & pre-filter gain"| n_g_voice_1
+  n_g_voice_1 -->|"Random moves channel 2 pan cv"| n_g_bus
+  n_g_external -.->|"3 × gate / trig / clock"| n_g_time
+  n_g_external -->|"3 × pitch"| n_g_voice_2
+  n_g_voice_2 ==>|"into MIX4"| n_g_bus
+  linkStyle 0 stroke:#d64545
+  linkStyle 1 stroke:#2f74c4
+  linkStyle 2 stroke:#2c9457
+  linkStyle 3 stroke:#b97d00
+  linkStyle 4 stroke:#2f74c4
+  linkStyle 5 stroke:#2c9457
+  linkStyle 6 stroke:#2c9457
+  linkStyle 7 stroke:#2f74c4
+  linkStyle 8 stroke:#b97d00
+  linkStyle 9 stroke:#d64545
+  classDef time stroke:#2f74c4,stroke-width:2px
+  classDef pitch stroke:#b97d00,stroke-width:2px
+  classDef controller stroke:#2c9457,stroke-width:2px
+  classDef source stroke:#d64545,stroke-width:2px
+  classDef modifier stroke:#c2611f,stroke-width:2px
+  classDef mixer stroke:#7a52b3,stroke-width:2px
+  classDef effect stroke:#b0479a,stroke-width:2px
+  classDef io stroke:#6b6b70,stroke-width:2px
+  classDef performance stroke:#138a8a,stroke-width:2px
+  classDef monitor stroke:#9a958a,stroke-width:1px,stroke-dasharray:2 3
+```
+
+</details>
+
 ## Your own modules
 
 A module that neither Cardinal nor the VCV Library knows, such as your own plugin or one not published yet, shows numbered ports (`in#0`) and a role guessed from its name. You can describe it yourself:
 
 - **Web app, Modules tab**: lists the modules of the patch the catalog can't explain. *Describe* opens an editor for the name, role, tags and port names (as Rack shows them when hovering each port, in port order); a module's sheet in the Diagram tab links there too. *Import plugin sources* reads `plugin.json` and the C++ sources (picked files, or a `.zip` of the repository) in the browser and fills every module of the plugin, the same way the catalog itself is built. Descriptions are kept in the browser and apply to every patch. *Export catalog* saves them as a file to keep or share, *Import catalog* reads one back. *What can I import?* explains both imports and offers a commented template, with an entry for each module of the patch the catalog can't explain.
 - **CLI**: `vcvpatch catalog scan --src MyPlugin` writes `MyPlugin.modules.json`; pass it to `info` or `diagram` with `--catalog`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/modules-dark.png">
+  <img alt="The Modules tab: a private module being described, with its name, role, tags and the names of its inputs and outputs, above the list of the patch's modules the catalog can't explain" src="docs/screenshots/modules-light.png">
+</picture>
 
 The file has the layout of `catalog/ports.overrides.json`, with an optional role (`Time`, `Pitch`, `Controller`, `Source`, `Modifier`, `Effect`, `Mixer`, `Io`, `Performance`, `Monitor`, `Router`):
 

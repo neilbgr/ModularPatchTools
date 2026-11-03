@@ -9,6 +9,13 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - The top bar shows the version; its menu gives the release date, the build and links to the source, the release notes
   and the command-line tool.
 
+### Fixed
+- Modules tab: the editor's buttons follow the dark theme.
+
+### Changed
+- Web app: scopes and displays show as boxes next to what they watch by default, instead of hidden. A scope view saved
+  in the browser before this change gives way to the new default once.
+
 ## [1.2.0] - 2026-11-03
 
 ### Added

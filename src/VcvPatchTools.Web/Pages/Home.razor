@@ -346,7 +346,7 @@
     private HashSet<string> hiddenLayers = new HashSet<string>();
     private Dictionary<long, string> intents = new Dictionary<long, string>();
     private HashSet<string> unfolded = new HashSet<string>();
-    private MonitorView monitors;
+    private MonitorView monitors = StoredState.Options.Default.Monitors;
     private bool functionNames;
     private bool portTabs = true;
     private bool libraryLinks = true;

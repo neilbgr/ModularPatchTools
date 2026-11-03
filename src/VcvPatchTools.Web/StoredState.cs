@@ -19,8 +19,15 @@ public static class StoredState
     /// <summary>The display options, remembered from one visit (and one patch) to the next.</summary>
     public sealed record Options(IReadOnlySet<string> HiddenLayers, bool ShowIntents, bool PortTabs, bool FunctionNames, bool LibraryLinks, MonitorView Monitors)
     {
-        public static Options Default { get; } = new Options(new HashSet<string>(), false, true, false, true, MonitorView.Hidden);
+        // Scopes and displays drawn as boxes, next to what they watch.
+        public static Options Default { get; } = new Options(new HashSet<string>(), false, true, false, true, MonitorView.Modules);
     }
+
+    /// <summary>
+    /// Saved with the options. Version 2 made the scope boxes the default: a scope view saved before (with no version) was
+    /// then always "hidden", the old default, whether chosen or not, so it is left out and the new default applies.
+    /// </summary>
+    private const int optionsVersion = 2;
 
     /// <summary>Saved options, each one that is missing or of the wrong kind left at its default.</summary>
     public static Options ParseOptions(string? json)
@@ -34,7 +41,9 @@ public static class StoredState
         HashSet<string> hidden = root.TryGetProperty(nameof(Options.HiddenLayers), out JsonElement layers) && layers.ValueKind == JsonValueKind.Array
             ? layers.EnumerateArray().Where(l => l.ValueKind == JsonValueKind.String).Select(l => l.GetString()!).Where(DiagramLayout.Layers.Contains).ToHashSet()
             : new HashSet<string>();
-        MonitorView monitors = root.TryGetProperty(nameof(Options.Monitors), out JsonElement view) && view.ValueKind == JsonValueKind.Number
+        bool current = root.TryGetProperty("Version", out JsonElement version) && version.ValueKind == JsonValueKind.Number
+            && version.TryGetInt32(out int saved) && saved >= optionsVersion;
+        MonitorView monitors = current && root.TryGetProperty(nameof(Options.Monitors), out JsonElement view) && view.ValueKind == JsonValueKind.Number
             && view.TryGetInt32(out int number) && Enum.IsDefined((MonitorView)number)
             ? (MonitorView)number
             : Options.Default.Monitors;
@@ -49,6 +58,7 @@ public static class StoredState
 
     public static string SerializeOptions(Options options) => JsonSerializer.Serialize(new
     {
+        Version = optionsVersion,
         HiddenLayers = options.HiddenLayers.ToArray(),
         options.ShowIntents,
         options.PortTabs,

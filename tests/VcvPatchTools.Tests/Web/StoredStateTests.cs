@@ -22,9 +22,21 @@ public class StoredStateTests
     [Fact]
     public void OptionsSavedByThePreviousVersionStillRead()
     {
-        StoredState.Options read = StoredState.ParseOptions("""{"HiddenLayers":["gate"],"ShowIntents":true,"PortTabs":true,"FunctionNames":false,"LibraryLinks":true,"Monitors":2}""");
+        StoredState.Options read = StoredState.ParseOptions("""{"HiddenLayers":["gate"],"ShowIntents":true,"PortTabs":false,"FunctionNames":false,"LibraryLinks":true,"Monitors":1}""");
 
-        Assert.Equal("gate|True|True|False|True|Modules", Fields(read));
+        // Everything but the scope view, saved when "hidden" was the default: the scope boxes, the new default, apply.
+        Assert.Equal("gate|True|False|False|True|Modules", Fields(read));
+    }
+
+    [Fact]
+    public void ScopesShowAsBoxesByDefault() => Assert.Equal(MonitorView.Modules, StoredState.Options.Default.Monitors);
+
+    [Fact]
+    public void AScopeViewChosenNowIsKept()
+    {
+        StoredState.Options hidden = StoredState.Options.Default with { Monitors = MonitorView.Hidden };
+
+        Assert.Equal(MonitorView.Hidden, StoredState.ParseOptions(StoredState.SerializeOptions(hidden)).Monitors);
     }
 
     [Theory]
