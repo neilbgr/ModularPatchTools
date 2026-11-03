@@ -5,6 +5,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
 ### Added
 - Aluminium Fader, Faders2, Faders4 and Buttons: named ports, the Performance role, and listed as bundled with the
   neilbgr edition of Cardinal.
@@ -69,7 +71,8 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/neilbgr/VcvPatchTools/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/neilbgr/VcvPatchTools/releases/tag/v1.0.0
