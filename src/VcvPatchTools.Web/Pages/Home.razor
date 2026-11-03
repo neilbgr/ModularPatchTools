@@ -40,11 +40,33 @@
                         <p class="vpd-long">Start from the overview. Click a stacked box to unfold it, and click an unfolded lane to fold it back. Click a module for its details, a single cable to write its intent. Drag the background to move around, Ctrl + wheel to zoom.</p>
                         <p class="vpd-short">Tap a stacked box to unfold it, a box or a cable for its details. Drag to move around, pinch to zoom.</p>
                         <p>The numbered layers are a reading path: audio first, then pitch, modulation, and gates.</p>
-                        <p class="vpd-version"><a href="https://github.com/neilbgr/VcvPatchTools/releases" target="_blank" rel="noopener">VCV Patch Tools @VcvPatchTools.Core.ProductVersion.Display</a></p>
                     </div>
                 </details>
             }
             <button class="rail-button" title="Theme: follow the system, light or dark" @onclick="CycleThemeAsync">@ThemeLabel</button>
+            @* The version, discreet; its menu says when it was released, what it was built from, and where to find more. *@
+            <details class="vpd-menu about">
+                <summary class="rail-button version" title="About VCV Patch Tools">v@(ProductVersion.Version)</summary>
+                <div class="menu">
+                    <p class="about-name">VCV Patch Tools @ProductVersion.Version</p>
+                    <p class="muted">@(ProductVersion.ReleaseDate is string released ? $"Released {released}" : "Not released yet: a build of work in progress")
+                        @if (ProductVersion.Commit is string commit)
+                        {
+                            <span> · build <a href="@($"{repository}/commit/{commit}")" target="_blank" rel="noopener">@commit[..Math.Min(8, commit.Length)]</a></span>
+                        }
+                    </p>
+                    <ul>
+                        @if (ProductVersion.ReleaseDate is not null)
+                        {
+                            <li><a href="@($"{repository}/releases/tag/v{ProductVersion.Version}")" target="_blank" rel="noopener">What's new in this version</a></li>
+                        }
+                        <li><a href="@repository" target="_blank" rel="noopener">Source code and documentation</a></li>
+                        <li><a href="@($"{repository}/releases")" target="_blank" rel="noopener">Command-line tool (Linux, Windows, macOS)</a></li>
+                        <li><a href="@IssueReport.NewIssueUrl" target="_blank" rel="noopener">Report an issue</a></li>
+                    </ul>
+                    <p class="muted">Patches are read in your browser: nothing is uploaded. MIT license.</p>
+                </div>
+            </details>
         </div>
     </header>
 
@@ -280,6 +302,8 @@
         Modules,
         Convert,
     }
+
+    private const string repository = "https://github.com/neilbgr/VcvPatchTools";
 
     // The user's own module descriptions (Modules tab), on top of the embedded catalog, for every patch.
     private UserCatalog userCatalog = UserCatalog.Empty;

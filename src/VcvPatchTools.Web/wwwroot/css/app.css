@@ -182,8 +182,15 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-menu.help .menu { left: auto; right: 0; width: min(360px, calc(100vw - 32px)); white-space: normal; gap: 0; font-size: 14px; }
 .vpd-menu.help .menu p { margin: 0 0 8px; }
 .vpd-menu.help .menu p:last-child { margin: 0; }
-.vpd-menu.help .menu .vpd-version { font-size: 13px; }
-.vpd-menu.help .menu .vpd-version a { color: var(--vpd-muted); }
+/* The version button and its About menu: small, muted, out of the way. */
+.rail-button.version { font-size: 12px; font-weight: 400; padding: 3px 7px; color: var(--rail-muted); }
+.rail-button.version:hover { color: var(--rail-ink); }
+.vpd-menu.about .menu { left: auto; right: 0; width: min(320px, calc(100vw - 32px)); white-space: normal; gap: 6px; }
+.vpd-menu.about .menu p, .vpd-menu.about .menu ul { margin: 0; }
+.vpd-menu.about .menu ul { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.vpd-menu.about .menu a { color: var(--vpd-gate); text-underline-offset: 3px; }
+.vpd-menu.about .menu .muted { color: var(--vpd-muted); font-size: 13px; }
+.vpd-menu.about .about-name { font-weight: 600; font-size: 15px; }
 .vpd-menu.help > summary { padding: 3px 0; width: 28px; justify-content: center; font-weight: 600; }
 
 /* Page */

@@ -5,6 +5,10 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+### Added
+- The top bar shows the version; its menu gives the release date, the build and links to the source, the release notes
+  and the command-line tool.
+
 ## [1.2.0] - 2026-11-03
 
 ### Added

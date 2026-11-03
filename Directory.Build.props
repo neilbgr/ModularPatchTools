@@ -14,4 +14,13 @@
     <Authors>neilbgr</Authors>
     <Copyright>Copyright (c) 2026 neilbgr</Copyright>
   </PropertyGroup>
+
+  <!-- The release date: the one CHANGELOG.md gives this version ("## [1.2.0] - 2026-11-03"), the section a release needs
+       anyway. Empty while the version isn't dated there yet. Shown by the web app (ProductVersion.ReleaseDate). -->
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)CHANGELOG.md')">
+    <ReleaseDate>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)CHANGELOG.md')), '(?&lt;=## \[$([System.Text.RegularExpressions.Regex]::Escape($(Version)))\] - )\d{4}-\d{2}-\d{2}').Value)</ReleaseDate>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="ReleaseDate" Value="$(ReleaseDate)" />
+  </ItemGroup>
 </Project>
