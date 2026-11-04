@@ -179,9 +179,31 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-menu .menu label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .vpd-menu .menu select { font: inherit; margin-left: 4px; }
 .vpd-menu .menu button { text-align: left; }
-.vpd-menu.help .menu { left: auto; right: 0; width: min(360px, calc(100vw - 32px)); white-space: normal; gap: 0; font-size: 14px; }
-.vpd-menu.help .menu p { margin: 0 0 8px; }
-.vpd-menu.help .menu p:last-child { margin: 0; }
+/* Help: short sections with room to breathe, not a block of text. */
+.vpd-menu.help .menu { left: auto; right: 0; width: min(400px, calc(100vw - 32px)); white-space: normal; gap: 0; padding: 16px 18px; font-size: 14px; line-height: 1.6; }
+.vpd-menu.help .menu h4 { margin: 18px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--vpd-muted); }
+.vpd-menu.help .menu h4:first-child { margin-top: 0; }
+.vpd-menu.help .menu p { margin: 0; }
+.vpd-menu.help .menu ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.vpd-menu.help .menu ul:not(.cable-legend) li { padding-left: 14px; position: relative; }
+.vpd-menu.help .menu ul:not(.cable-legend) li::before { content: "•"; position: absolute; left: 0; color: var(--vpd-muted); }
+.vpd-menu.help .menu b { font-weight: 600; }
+.vpd-menu.help .cable-legend { gap: 6px; font-size: 13px; }
+.vpd-menu.help .cable-legend li { display: flex; align-items: center; gap: 12px; }
+.vpd-menu.help .cable-legend svg, .vpd-menu.help .insert-sample { flex: none; width: 32px; }
+.vpd-menu.help .insert-sample { height: 12px; box-sizing: border-box; border: 1.5px dashed var(--vpd-muted); border-radius: 2px; }
+.vpd-menu.help .menu p.private, .vpd-empty p.private {
+  display: flex; gap: 10px; align-items: flex-start; margin: 0 0 18px; padding: 10px 12px; border-radius: 6px;
+  background: color-mix(in srgb, var(--vpd-modulation) 14%, transparent); border: 1px solid color-mix(in srgb, var(--vpd-modulation) 45%, transparent);
+}
+.vpd-menu.help .menu p.private + h4 { margin-top: 0; }
+.vpd-empty p.private { max-width: 640px; margin: 0 0 18px; font-size: 15px; }
+.vpd-menu.help .menu p.private svg, .vpd-empty p.private svg { flex: none; margin-top: 2px; color: var(--vpd-modulation); }
+/* The desktop or the touch wording, as everywhere else (the list display above would show both). */
+@media (min-width: 701px) and (min-height: 501px) { .vpd-menu.help .menu ul.vpd-short { display: none; } }
+@media (max-width: 700px), (max-height: 500px) { .vpd-menu.help .menu ul.vpd-long { display: none; } }
+/* Narrow screens: the rail wraps, so the bubble is held to the screen edges rather than to its button. */
+@media (max-width: 700px) { .vpd-menu.help .menu, .vpd-menu.about .menu { position: fixed; top: 64px; left: 16px; right: 16px; width: auto; max-height: calc(100dvh - 80px); overflow: auto; } }
 /* The version button and its About menu: small, muted, out of the way. */
 .rail-button.version { font-size: 12px; font-weight: 400; padding: 3px 7px; color: var(--rail-muted); }
 .rail-button.version:hover { color: var(--rail-ink); }

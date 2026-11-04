@@ -2,7 +2,9 @@
 
 Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](https://github.com/DISTRHO/Cardinal) `.vcv` patches: a block diagram that explains how a patch works, what a patch file holds, and a converter between Rack and Cardinal.
 
-**Try it online: [neilbgr.github.io/ModularPatchTools](https://neilbgr.github.io/ModularPatchTools/)**. Drop a `.vcv` file on the page, or open the sample patch. The patch is read in your browser and never uploaded.
+**Try it online: [neilbgr.github.io/ModularPatchTools](https://neilbgr.github.io/ModularPatchTools/)**. Drop a `.vcv` file on the page, or open the sample patch.
+
+> 🔒 **Your patch never leaves your browser.** It is read right there: nothing is uploaded, nothing is stored on a server.
 
 *Formerly VCV Patch Tools. VCV and VCV Rack are trademarks of VCV; this project is not affiliated with VCV.*
 
@@ -286,7 +288,7 @@ make test
 make web
 ```
 
-Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=catalog` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/ModularPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics, the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
+Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=catalog` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/ModularPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics and a legend of the cable styles (colors by signal, thicker for merged cables, dash-dot for feedback, dashes for what a scope watches), the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
 
 - unfold/fold boxes, or use **Overview** / **Unfold all**;
 - the numbered layer chips, in their cable color: a hidden layer's chip shows every layer up to it, a shown one's hides just that layer;

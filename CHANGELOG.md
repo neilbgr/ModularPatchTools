@@ -10,6 +10,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   from its lowest output just under its box into its lowest input, crossing nothing; such modules count as feedback
   loops (folded boxes hint at them, `inspect` lists them).
 - The Info tab lists the patch's feedback loops.
+- The **?** menu has a legend of the cable styles: colors by signal, thicker for merged cables, dash-dot for feedback,
+  dashes for what a scope watches, a dashed box for an insert.
 - The Info tab groups modules of the same kind on one row, with their count; a click on it lists the instances.
 - The Info tab links to one VCV Library page with all the patch's modules, as Rack does for missing modules, to add
   them to your account.
@@ -17,6 +19,9 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   Info tab's Cardinal column and the module sheet's Cardinal note go away, for Rack-only users. Remembered by the browser.
 
 ### Changed
+- "Your patch never leaves your browser" stands out on the welcome page and at the top of the **?** menu.
+- The **?** menu is easier to read: short sections (Explore, Layers, Cables) with more room, and it stays on screen
+  on a phone.
 - The Modules tab is now the **Catalog** tab: it edits your module catalog, and its old name read as the list of the
   patch's modules (that list is in the Info tab). Links with `?tab=modules` still open it.
 - Feedback cables are drawn dash-dot (scope links keep their plain dashes) instead of carrying a "↺ feedback" tag; the

@@ -36,10 +36,30 @@
                 <details class="vpd-menu help">
                     <summary class="rail-button" title="How to read and use the diagram" aria-label="Help">?</summary>
                     <div class="menu">
-                        <p>The patch is read in your browser: nothing is uploaded.</p>
-                        <p class="vpd-long">Start from the overview. Click a stacked box to unfold it, and click an unfolded lane to fold it back. Click a module for its details, a single cable to write its intent. Drag the background to move around, Ctrl + wheel to zoom.</p>
-                        <p class="vpd-short">Tap a stacked box to unfold it, a box or a cable for its details. Drag to move around, pinch to zoom.</p>
-                        <p>The numbered layers are a reading path: audio first, then pitch, modulation, and gates.</p>
+                        @* The tool's promise first: a patch is private work, and it stays on the user's machine. *@
+                        <p class="private"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" stroke-width="1.6" /><rect x="2.5" y="7" width="11" height="7.5" rx="1.5" fill="currentColor" /></svg>
+                            <span><b>Your patch never leaves your browser.</b> It is read right here: nothing is uploaded, nothing is stored on a server.</span></p>
+                        <h4>Explore</h4>
+                        <ul class="vpd-long">
+                            <li>Start from the overview: <b>click a stacked box</b> to unfold it, an unfolded lane to fold it back.</li>
+                            <li><b>Click a module</b> for its details, <b>a single cable</b> to write why it's there.</li>
+                            <li><b>Drag</b> the background to move around, <b>Ctrl + wheel</b> to zoom.</li>
+                        </ul>
+                        <ul class="vpd-short">
+                            <li><b>Tap a stacked box</b> to unfold it, a box or a cable for its details.</li>
+                            <li><b>Drag</b> to move around, <b>pinch</b> to zoom.</li>
+                        </ul>
+                        <h4>Layers</h4>
+                        <p>A reading path, one kind of signal at a time: <b>1</b> audio, <b>2</b> pitch, <b>3</b> modulation, <b>4</b> gates.</p>
+                        @* The cable styles, drawn with the diagram's own classes so they match it in both themes. *@
+                        <h4>Cables</h4>
+                        <ul class="cable-legend">
+                            @foreach ((string style, string text) in cableLegend)
+                            {
+                                <li><svg viewBox="0 0 32 10" width="32" height="10" aria-hidden="true"><g class="vpd-edge @style"><path d="M 1 5 H 31" /></g></svg>@text</li>
+                            }
+                            <li><span class="insert-sample" aria-hidden="true"></span>a dashed box: an insert or send/return effect, under its module</li>
+                        </ul>
                     </div>
                 </details>
             }
@@ -79,7 +99,9 @@
         @if (diagram is null)
         {
             <section class="vpd-empty">
-                <p class="lead">See what a VCV Rack or Cardinal patch does: its diagram, the modules it holds, and a conversion between Rack and Cardinal. The patch is read in your browser, nothing is uploaded.</p>
+                <p class="lead">See what a VCV Rack or Cardinal patch does: its diagram, the modules it holds, and a conversion between Rack and Cardinal.</p>
+                <p class="private"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" stroke-width="1.6" /><rect x="2.5" y="7" width="11" height="7.5" rx="1.5" fill="currentColor" /></svg>
+                    <span><b>Your patch never leaves your browser.</b> It is read right here: nothing is uploaded, nothing is stored on a server.</span></p>
                 <div class="vpd-drop">
                     <span>Drop a <code>.vcv</code> patch here, or click to choose one</span>
                     <InputFile OnChange="LoadAsync" accept="@fileFilter" />
@@ -310,6 +332,18 @@
     }
 
     private const string repository = "https://github.com/neilbgr/ModularPatchTools";
+
+    /// <summary>The help menu's legend: the diagram's edge classes, and what each style means.</summary>
+    private static readonly (string Style, string Text)[] cableLegend =
+    {
+        ("sig-audio", "audio"),
+        ("sig-pitch", "pitch (V/oct)"),
+        ("sig-cv", "modulation (CV)"),
+        ("sig-gate", "gate, trigger, clock"),
+        ("sig-cv merged", "thicker: several cables merged, a group is folded"),
+        ("sig-cv feedback", "dash-dot: feedback, back to an earlier module"),
+        ("sig-cv monitor", "dashes: watched by a scope or display"),
+    };
 
     // The user's own module descriptions (Catalog tab), on top of the embedded catalog, for every patch.
     private UserCatalog userCatalog = UserCatalog.Empty;
