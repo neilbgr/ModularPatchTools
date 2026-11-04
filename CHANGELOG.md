@@ -5,6 +5,17 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-04
+
+### Fixed
+- Modules tagged with one of Rack's other names for a tag ("Drums", "Percussion", "Clock", "S&H", "EQ"…) take the
+  role of that tag instead of a guessed controller; unknown modules named like drums ("Kick", "Snare", "Perc"…) are
+  guessed as voices.
+
+### Changed
+- Web app: the notes under the diagram fold to one line ("⚠ 3 notes about this patch"), opened by a click, so the
+  diagram takes the whole page. The Info tab still lists them in full.
+
 ## [1.3.0] - 2026-11-03
 
 ### Added
@@ -84,7 +95,8 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/VcvPatchTools/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/neilbgr/VcvPatchTools/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/neilbgr/VcvPatchTools/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.0...v1.1.1
