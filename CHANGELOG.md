@@ -5,6 +5,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-04
+
 ### Added
 - A module patched into itself (an output back into its own FM or feedback input) shows its cable, a tight loop
   from its lowest output just under its box into its lowest input, crossing nothing; such modules count as feedback
@@ -141,7 +143,8 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.1.1...v1.2.0
