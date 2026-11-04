@@ -5,6 +5,10 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+### Fixed
+- An oscillator patched into a control input of an effect or a mixer (a delay's Clock, an FM input…) was treated as
+  audio, with a "color says Gate" warning: its cable color now decides, as for any other modulation.
+
 ## [1.4.1] - 2026-11-04
 
 ### Fixed

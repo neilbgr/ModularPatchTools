@@ -50,4 +50,22 @@ public class SignalClassifierTests
     [Fact]
     public void AnInputNamedCvTakesAModulationEvenFromAProcessor() =>
         Assert.Equal(SignalType.Cv, classifier.Classify(null, "Channel", "Channel 2 CV", Role.Modifier, Role.Mixer).Type);
+
+    [Fact]
+    public void ASourceOutputIntoAnAudioInputIsAudioWhateverTheColor()
+    {
+        (SignalType type, string? mismatch) = classifier.Classify("#52beff", "Pulse", "In", Role.Source, Role.Effect);
+        Assert.Equal(SignalType.Audio, type);
+        Assert.NotNull(mismatch);
+    }
+
+    [Theory]
+    [InlineData("Clock")]
+    [InlineData("FM")]
+    public void ASourceOutputIntoAControlInputKeepsItsColor(string toPort)
+    {
+        (SignalType type, string? mismatch) = classifier.Classify("#52beff", "Pulse", toPort, Role.Source, Role.Effect);
+        Assert.Equal(SignalType.Gate, type);
+        Assert.Null(mismatch);
+    }
 }

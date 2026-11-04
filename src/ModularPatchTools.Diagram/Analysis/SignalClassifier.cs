@@ -43,8 +43,10 @@ public sealed class SignalClassifier
 
         // A source's plain output (no CV/gate/pitch in its name) patched into a processor or a mixer is its audio,
         // whatever the cable color says: the color is then most likely a slip, so it's reported.
+        // Not into a control input though: an oscillator patched into a delay's Clock or a filter's FM is used as
+        // a clock or a modulation, and the color says which.
         bool sourceAudio = fromRole == Role.Source && toRole is Role.Modifier or Role.Effect or Role.Mixer
-            && byFromPort is null && !IsCvName(fromPort);
+            && byFromPort is null && !IsCvName(fromPort) && !IsModulationInput(toPort);
         if (sourceAudio && byColor is SignalType wrongColor && wrongColor != SignalType.Audio)
         {
             return (SignalType.Audio, $"color says {wrongColor}, but a source's audio output into a {toRole.ToString().ToLowerInvariant()} is audio: treated as audio");
