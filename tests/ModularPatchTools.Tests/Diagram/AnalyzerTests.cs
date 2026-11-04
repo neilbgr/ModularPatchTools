@@ -45,7 +45,8 @@ public class AnalyzerTests
     {
         Dictionary<SignalType, int> counts = analysis.Cables.GroupBy(c => c.Signal).ToDictionary(g => g.Key, g => g.Count());
 
-        Assert.Equal(12, counts[SignalType.Audio]);
+        // 12, and the scope on the delay's L/R output.
+        Assert.Equal(14, counts[SignalType.Audio]);
         Assert.Equal(5, counts[SignalType.Pitch]);
         Assert.Equal(11, counts[SignalType.Cv]);
         Assert.Equal(10, counts[SignalType.Gate]);

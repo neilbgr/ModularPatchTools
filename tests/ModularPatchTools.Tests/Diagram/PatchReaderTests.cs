@@ -11,8 +11,8 @@ public class PatchReaderTests
         PatchDocument patch = PatchReader.Read(Fixtures.AmbientJamBytes);
 
         Assert.Equal("2.4.1", patch.RackVersion);
-        Assert.Equal(23, patch.Modules.Count);
-        Assert.Equal(38, patch.Cables.Count);
+        Assert.Equal(24, patch.Modules.Count);
+        Assert.Equal(40, patch.Cables.Count);
     }
 
     [Fact]

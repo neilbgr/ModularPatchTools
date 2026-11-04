@@ -325,7 +325,9 @@ Right</title><rect x="2614.4" y="837" width="24.2" height="12" rx="3"/><text x="
 in  Left audio ← Plateau
 in  Right audio ← Plateau
 out Left audio → Audio 2
-out Right audio → Audio 2</title><g class="tab sig-audio"><title>Left audio
+out Right audio → Audio 2
+out Left audio → Scope
+out Right audio → Scope</title><g class="tab sig-audio"><title>Left audio
 Right audio</title><rect x="2687.8" y="837" width="56.6" height="12" rx="3"/><text x="2716.1" y="846.2" text-anchor="middle">L/R audio</text></g><g class="tab sig-audio"><title>Left audio
 Right audio</title><rect x="2914.4" y="837" width="56.6" height="12" rx="3"/><text x="2942.7" y="846.2" text-anchor="middle">L/R audio</text></g><rect class="box" x="2744.4" y="820" width="170" height="46" rx="6"/><rect class="stripe" x="2744.4" y="820" width="5" height="46" rx="2"/><text class="title" x="2758.4" y="840">Delay Plus Stereo…</text><path class="icon" transform="translate(2890.4 829)" d="M2 11 V1 M6.5 11 V4 M11 11 V7 M15.5 11 V9"/><text class="subtitle" x="2758.4" y="856">AS &#183; delay</text><a class="lib" href="https://library.vcvrack.com/AS/DelayPlusStereoFx" target="_blank" rel="noopener" data-library="AS/DelayPlusStereoFx" aria-label="Open in the VCV Library"><title>Open in the VCV Library</title><rect x="2892.4" y="845" width="14" height="14" rx="3"/><path transform="translate(2894.4 847)" d="M4 1 H1 V9 H9 V6 M6 1 H9 V4 M9 1 L4.5 5.5"/></a></g><g class="vpd-node role-io" data-id="m1"><title>Audio 2 (Cardinal &#183; Io)
 in  Left ← Delay Plus Stereo Fx
