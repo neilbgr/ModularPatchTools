@@ -1,4 +1,4 @@
-@inject IJSRuntime JS
+﻿@inject IJSRuntime JS
 
 @* The user's own module descriptions: for modules neither the catalog nor the VCV Library can name (a plugin of
    their own, one not published yet). Kept in this browser; the file can be exported to keep or share it. *@
@@ -190,7 +190,7 @@
     private static string Missing(UncataloguedModule m) => string.Join(", ", new[]
     {
         m.PortsUnknown ? (m.Published ? "port names (closed source)" : "port names (not in the VCV Library)") : null,
-        m.RoleGuessed ? "role (guessed from its name)" : null,
+        m.RoleGuessed ? "role (guessed)" : null,
     }.OfType<string>());
 
     private void Edit(string key)

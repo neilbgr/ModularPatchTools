@@ -40,6 +40,14 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - Scopes and displays watching the same signal (a loudness meter and a VU meter on the master) are stacked in the
   order their cables come in, so the cables no longer cross.
 - A scope's cables are as thick as the signal and the cables they stand for (an L/R pair is a thick line), still dashed.
+- Far fewer modules get a role guessed as "controller" (a forum user's VCV Merge did):
+  - VCV Fundamental's Merge, Split, Sum, Mult, Compare, Gates, Push, Rescale and Mid/Side have their role;
+  - about 430 modules tagged only "Utility" or "Polyphonic" take the role their VCV Library description points to
+    ("Split polyphonic input to 16 outputs" is a router), still reported as a guess, "from its VCV Library description";
+  - more tags count (MIDI, Tuner, Panning, Ring modulator, Function generator, Recording, Multiple, Attenuator, and tags
+    packed in one string like "Mixer, Utilities"), and more name keywords (Merge, Split, Mute, Count, Chord…), short
+    ones only where a word starts ("AutoScale" is no oscillator);
+  - a few modules whose description says nothing got their role from their documentation (Qwelk Wrap, JW MinMax…).
 - An insert that also feeds another module (a reverb in a filter's insert feeding a detector) no longer has its
   send arrow landing on its own output: the send and the return take the top slot of their side.
 

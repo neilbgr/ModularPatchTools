@@ -13,6 +13,7 @@
     <EmbeddedResource Include="..\..\catalog\ports.overrides.json" LogicalName="catalog.ports.overrides.json" />
     <EmbeddedResource Include="..\..\catalog\roles.json" LogicalName="catalog.roles.json" />
     <EmbeddedResource Include="..\..\catalog\library.json" LogicalName="catalog.library.json" Condition="Exists('..\..\catalog\library.json')" />
+    <EmbeddedResource Include="..\..\catalog\library-roles.json" LogicalName="catalog.library-roles.json" Condition="Exists('..\..\catalog\library-roles.json')" />
     <EmbeddedResource Include="..\..\catalog\library-plugins.json" LogicalName="catalog.library-plugins.json" Condition="Exists('..\..\catalog\library-plugins.json')" />
     <EmbeddedResource Include="..\..\catalog\cardinal.json" LogicalName="catalog.cardinal.json" Condition="Exists('..\..\catalog\cardinal.json')" />
   </ItemGroup>

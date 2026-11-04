@@ -95,6 +95,89 @@ public class CatalogTests
     [InlineData("Made up", "Made up")]
     public void TagsTakeRacksOwnName(string tag, string expected) => Assert.Equal(expected, RackTags.Canonical(tag));
 
+    [Theory]
+    [InlineData("Merge", Role.Router)]
+    [InlineData("Split", Role.Router)]
+    [InlineData("Sum", Role.Router)]
+    [InlineData("Mult", Role.Router)]
+    [InlineData("Compare", Role.Controller)]
+    [InlineData("Gates", Role.Time)]
+    [InlineData("Push", Role.Performance)]
+    [InlineData("Rescale", Role.Controller)]
+    [InlineData("MidSide", Role.Modifier)]
+    public void VcvFundamentalModulesAreNotGuessed(string model, Role expected)
+    {
+        // Tagged only "Utility" / "Polyphonic": a forum user's Merge came out as a guessed controller.
+        (Role role, bool guessed) = RoleCatalog.LoadEmbedded().Resolve("Fundamental", model, PortCatalog.LoadEmbedded().Get("Fundamental", model));
+
+        Assert.Equal(expected, role);
+        Assert.False(guessed);
+    }
+
+    [Theory]
+    [InlineData("Split polyphonic input to 16 output channels", Role.Router)]
+    [InlineData("Gate to Trigger Converter", Role.Time)]
+    [InlineData("16 voice polyphonic chord generator", Role.Pitch)]
+    [InlineData("A Precise Voltage-Source with Display.", Role.Controller)]
+    [InlineData("Filtered Noise Generator", Role.Source)]
+    [InlineData("Polyphonic per-channel offset and scale", Role.Controller)]
+    [InlineData("Additional scales for Quant.", Role.Pitch)]
+    [InlineData("Utility for converting mouse-wheel movement into triggers", Role.Performance)]
+    [InlineData("Stereo Audio Levelmeter", Role.Monitor)]
+    [InlineData("BPM to delay/hz calculator helper", Role.Time)]
+    public void LibraryDescriptionsPointToARole(string description, Role expected) => Assert.Equal(expected, DescriptionRoles.Guess(description));
+
+    [Theory]
+    [InlineData("Breaks polyphonic signals out to individual normalled output/input pairs")]
+    [InlineData("Blank panel for CV funk.")]
+    [InlineData("Particle animation generator")]
+    [InlineData("")]
+    public void VagueDescriptionsGiveNoRole(string description) => Assert.Null(DescriptionRoles.Guess(description));
+
+    [Fact]
+    public void LibraryDescriptionComesBelowTheTagsAndAboveTheName()
+    {
+        RoleCatalog catalog = new RoleCatalog(new Dictionary<string, Role>(), new Dictionary<string, Role> { ["P/Thing"] = Role.Router });
+        ModuleInfo utility = new ModuleInfo(null, new[] { "Utility" }, Array.Empty<string>(), Array.Empty<string>());
+
+        Assert.Equal((Role.Router, RoleSource.Description), catalog.ResolveWithSource("P", "Thing", utility));
+        Assert.True(catalog.Resolve("P", "Thing", utility).Guessed);
+        Assert.Equal((Role.Effect, RoleSource.Tags), catalog.ResolveWithSource("P", "Thing", new ModuleInfo(null, new[] { "Reverb" }, Array.Empty<string>(), Array.Empty<string>())));
+    }
+
+    [Theory]
+    [InlineData("AutoScale", Role.Controller)]
+    [InlineData("CVConverter", Role.Controller)]
+    [InlineData("MultiPan", Role.Modifier)]
+    [InlineData("PolyMuter8", Role.Router)]
+    [InlineData("Merge8", Role.Router)]
+    public void ShortNameKeywordsOnlyStartAWord(string model, Role expected) =>
+        // "AutoScale" holds "osc", "CVConverter" holds "vco", "MultiPan" starts with "Mult": none of them is meant.
+        Assert.Equal(expected, RoleCatalog.FromJson("{}").Resolve("Acme", model, ModuleInfo.Empty).Role);
+
+    [Fact]
+    public void TagsPackedInOneStringEachCount() => Assert.Equal(Role.Mixer, RoleCatalog.FromTags(new[] { "Mixer, Utilities" }));
+
+    [Fact]
+    public void DescribedRolesSkipTaggedAndExplicitModules()
+    {
+        string manifest = """
+            { "slug": "P", "modules": [
+              { "slug": "Splitter", "description": "Splits a polyphonic input into monophonic outputs", "tags": ["Utility"] },
+              { "slug": "Verb", "description": "Splits the sound into a reverb", "tags": ["Reverb"] },
+              { "slug": "Named", "description": "Merges channels", "tags": ["Utility"] },
+              { "slug": "Mystery", "description": "Something nobody can tell", "tags": ["Utility"] } ] }
+            """;
+        Dictionary<string, Role> roles = LibraryManifests.DescribedRoles(new[] { manifest }, RoleCatalog.FromJson("""{ "P/Named": "Time" }"""));
+
+        Assert.Equal(new Dictionary<string, Role> { ["P/Splitter"] = Role.Router }, roles);
+    }
+
+    [Fact]
+    public void EmbeddedCatalogKnowsLibraryDescriptions() =>
+        // 23volts Merge8: "8 voice polyphonic merger", tagged only Polyphonic/Utility.
+        Assert.Equal((Role.Router, RoleSource.Description), RoleCatalog.LoadEmbedded().ResolveWithSource("23volts", "Merge8", PortCatalog.LoadEmbedded().Get("23volts", "Merge8")));
+
     [Fact]
     public void RoleGuessedFromSlugIsFlagged()
     {

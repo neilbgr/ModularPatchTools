@@ -241,7 +241,15 @@ internal static class CatalogCommand
         File.WriteAllText(outputPath, LibraryManifests.ToJson(missing));
         string pluginsPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(outputPath))!, "library-plugins.json");
         File.WriteAllText(pluginsPath, "[\n" + string.Join(",\n", plugins.Select(p => "  " + System.Text.Json.JsonSerializer.Serialize(p))) + "\n]\n");
-        Console.WriteLine($"{manifests} manifests, {plugins.Count} plugins → {pluginsPath}, {missing.Count} modules without port names → {outputPath}");
+        // Roles from the descriptions, for modules whose tags say nothing ("Utility", "Polyphonic").
+        string catalogDir = Path.GetDirectoryName(Path.GetFullPath(outputPath))!;
+        string rolesPath = Path.Combine(catalogDir, "roles.json");
+        RoleCatalog explicitRoles = File.Exists(rolesPath) ? RoleCatalog.FromJson(File.ReadAllText(rolesPath)) : new RoleCatalog(new Dictionary<string, Role>());
+        Dictionary<string, Role> described = LibraryManifests.DescribedRoles(
+            Directory.EnumerateFiles(manifestsDir, "*.json").Order(StringComparer.Ordinal).Select(File.ReadAllText), explicitRoles);
+        string describedPath = Path.Combine(catalogDir, "library-roles.json");
+        File.WriteAllText(describedPath, LibraryManifests.RolesToJson(described));
+        Console.WriteLine($"{manifests} manifests, {plugins.Count} plugins → {pluginsPath}, {missing.Count} modules without port names → {outputPath}, {described.Count} roles from descriptions → {describedPath}");
         return 0;
     }
 

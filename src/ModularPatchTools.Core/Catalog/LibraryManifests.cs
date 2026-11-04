@@ -35,6 +35,48 @@ public static class LibraryManifests
         }
     }
 
+    /// <summary>"Plugin/Model" → the module's one-line description, for those that have one.</summary>
+    public static IEnumerable<KeyValuePair<string, string>> Descriptions(string manifestJson)
+    {
+        if (JsonNode.Parse(manifestJson, documentOptions: documentOptions) is not JsonObject manifest
+            || Text(manifest["slug"]) is not string plugin || manifest["modules"] is not JsonArray modules)
+        {
+            yield break;
+        }
+        foreach (JsonObject module in modules.OfType<JsonObject>())
+        {
+            if (Text(module["slug"]) is string model && Text(module["description"]) is string description)
+            {
+                yield return new KeyValuePair<string, string>($"{plugin}/{model}", description);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Roles read from the descriptions (see <see cref="DescriptionRoles"/>), only for modules whose tags decide none
+    /// and that roles.json doesn't name: one line each, for catalog/library-roles.json.
+    /// </summary>
+    public static Dictionary<string, Role> DescribedRoles(IEnumerable<string> manifests, RoleCatalog explicitRoles)
+    {
+        Dictionary<string, Role> roles = new Dictionary<string, Role>(StringComparer.Ordinal);
+        foreach (string manifest in manifests)
+        {
+            Dictionary<string, ModuleInfo> modules = Modules(manifest).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+            foreach ((string key, string description) in Descriptions(manifest))
+            {
+                if (!explicitRoles.IsExplicit(key) && modules.TryGetValue(key, out ModuleInfo? info) && RoleCatalog.FromTags(info.Tags) is null
+                    && DescriptionRoles.Guess(description) is Role role)
+                {
+                    roles[key] = role;
+                }
+            }
+        }
+        return roles;
+    }
+
+    public static string RolesToJson(IReadOnlyDictionary<string, Role> roles) =>
+        "{\n" + string.Join(",\n", roles.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"  {JsonSerializer.Serialize(kv.Key)}: \"{kv.Value}\"")) + "\n}\n";
+
     /// <summary>One line per module, name and tags only: the file stays small enough to embed in the web app.</summary>
     public static string ToJson(IEnumerable<KeyValuePair<string, ModuleInfo>> modules)
     {

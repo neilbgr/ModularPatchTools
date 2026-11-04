@@ -58,7 +58,8 @@ public sealed class PatchAnalyzer
         foreach (PatchModule module in shown)
         {
             ModuleInfo info = ports.Get(module.Plugin, module.Model);
-            (Role role, bool guessed) = roles.Resolve(module.Plugin, module.Model, info);
+            (Role role, RoleSource roleSource) = roles.ResolveWithSource(module.Plugin, module.Model, info);
+            bool guessed = roleSource >= RoleSource.Description;
             roleById[module.Id] = role;
 
             // Modules known only by name (VCV Library manifests) or not at all: ports go by number.
@@ -79,7 +80,7 @@ public sealed class PatchAnalyzer
                     ? seen with { Inputs = Math.Max(seen.Inputs, other.Inputs), Outputs = Math.Max(seen.Outputs, other.Outputs) }
                     : seen;
             }
-            string? guess = guessed ? $"role guessed as {role} from its name" : null;
+            string? guess = guessed ? $"role guessed as {role} from its {(roleSource == RoleSource.Description ? "VCV Library description" : "name")}" : null;
             if (unknownPorts is not null || guess is not null)
             {
                 string portsNote = unknownPorts is null ? "" : unknownPorts + ": ports shown by number";

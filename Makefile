@@ -1,4 +1,4 @@
-CLI     := src/ModularPatchTools.Cli
+﻿CLI     := src/ModularPatchTools.Cli
 WEB     := src/ModularPatchTools.Web
 CONFIG  := Release
 PLUGINS ?= ../Cardinal/plugins
@@ -28,7 +28,8 @@ catalog:
 
 # Regenerates catalog/library.json: names and tags, from the VCV Library's manifests (VCVRack/library at the pinned
 # commit below), of the modules ports.json lacks (closed-source plugins…), and catalog/library-plugins.json: the
-# plugins the Library publishes (others get no Library link). Run it after `make catalog`.
+# plugins the Library publishes (others get no Library link), and catalog/library-roles.json: roles read from the
+# modules' descriptions when their tags say nothing ("Utility"). Run it after `make catalog`.
 LIBRARY_COMMIT := 9c4e6ffe2629d2afdb5b5b0dce838eeac661d783
 library-catalog:
 	scripts/fetch-library-manifests.sh $(LIBRARY_COMMIT)

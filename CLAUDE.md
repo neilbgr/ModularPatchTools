@@ -14,7 +14,7 @@ C# solution targeting **.NET 10**. All code, comments, console/UI output, commit
 - `src/ModularPatchTools.Cli`: `modpatch` console app (info, convert, diagram, catalog build|cardinal), the only project touching files.
 - `src/ModularPatchTools.Web`: standalone Blazor WebAssembly UI (Diagram, Info, Convert tabs), no server.
 - `tests/ModularPatchTools.Tests`: one xUnit project, with folders per library.
-- `catalog/`: `ports.json` (`make catalog`) and `cardinal.json` (`make cardinal-catalog`) are generated, `ports.overrides.json` and `roles.json` are hand-written.
+- `catalog/`: `ports.json` (`make catalog`), `library.json` / `library-roles.json` (`make library-catalog`) and `cardinal.json` (`make cardinal-catalog`) are generated, `ports.overrides.json` and `roles.json` are hand-written.
 
 ## Development workflow
 Use unit tests (xUnit, `tests/ModularPatchTools.Tests`) to drive development: write/update a test for new behavior or a bug before or alongside the fix, then run `dotnet test`. Don't consider a change done until the test suite passes.
