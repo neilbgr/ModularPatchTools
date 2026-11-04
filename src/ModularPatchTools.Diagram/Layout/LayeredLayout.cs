@@ -463,8 +463,12 @@ public static class LayeredLayout
         Placement placed = Snapshot(y, 0);
         ILookup<string, string> watchedFrom = merged.ToLookup(g => g.Key.To, g => g.Key.From);
         double Wanted(string watcher) => watchedFrom[watcher].Select(placed.Center).DefaultIfEmpty(margin).Average();
+        // Watchers of the same signal tie: the one whose cables come in on the higher track goes higher, or they cross.
+        double Arriving(string watcher) => merged.Where(g => g.Key.To == watcher)
+            .Select(g => routing.Plans.TryGetValue(g.Key, out Plan? plan) && plan.Tracks.Count > 0 ? trackY[plan.Tracks[^1]] : placed.Center(g.Key.From))
+            .DefaultIfEmpty(margin).Average();
         double cursorY = margin + bandHeaderHeight;
-        foreach (string watcher in stacks.Watchers.OrderBy(Wanted))
+        foreach (string watcher in stacks.Watchers.OrderBy(Wanted).ThenBy(Arriving))
         {
             double top = Math.Max(cursorY, Wanted(watcher) - (heightOf[watcher] / 2));
             positions[watcher] = (columns.Count, top);

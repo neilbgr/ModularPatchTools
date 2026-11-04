@@ -201,6 +201,50 @@ public class AnalyzerTests
         Assert.All(insert.Tabs.Where(t => t.Output), t => Assert.True(Math.Abs(t.Y - sendY) >= 8, $"output tab at {t.Y}, send at {sendY}"));
     }
 
+    [Fact]
+    public void TwoScopesOnOneSignalDoNotCrossTheirCables()
+    {
+        // A second scope on the delay's output, next to the sample's own (as a loudness meter and a VU meter on a master).
+        PatchArchive archive = AmbientJamWith();
+        archive.Root["modules"]!.AsArray().Add(new JsonObject { ["id"] = 77, ["plugin"] = "Fundamental", ["model"] = "Scope", ["version"] = "2.1.0", ["pos"] = new JsonArray(10, 2) });
+        archive.Root["cables"]!.AsArray().Add(new JsonObject { ["id"] = 78, ["outputModuleId"] = delay, ["outputId"] = 2, ["inputModuleId"] = 77, ["inputId"] = 0, ["color"] = "#ff5252" });
+        PatchAnalysis patch = PatchDiagram.Analyze(archive);
+        DiagramLayout layout = PatchDiagram.Layout(patch, "AmbientJam", PatchDiagram.GroupKeys(patch), monitors: MonitorView.Modules);
+
+        List<DiagramEdge> watched = layout.Edges.Where(e => e.IsMonitor).ToList();
+        Assert.Equal(2, watched.Count);
+        Assert.False(Cross(watched[0].Path, watched[1].Path), $"{watched[0].Path}\n{watched[1].Path}");
+    }
+
+    /// <summary>Whether a horizontal run of one path cuts a vertical run of the other (corners left out).</summary>
+    private static bool Cross(string a, string b)
+    {
+        static List<(double X1, double Y1, double X2, double Y2)> Runs(string path)
+        {
+            string[] t = path.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            double D(int i) => double.Parse(t[i], System.Globalization.CultureInfo.InvariantCulture);
+            List<(double, double, double, double)> runs = new List<(double, double, double, double)>();
+            double x = 0, y = 0;
+            for (int i = 0; i < t.Length;)
+            {
+                switch (t[i])
+                {
+                    case "M": x = D(i + 1); y = D(i + 2); i += 3; break;
+                    case "H": runs.Add((x, y, D(i + 1), y)); x = D(i + 1); i += 2; break;
+                    case "V": runs.Add((x, y, x, D(i + 1))); y = D(i + 1); i += 2; break;
+                    case "Q": x = D(i + 3); y = D(i + 4); i += 5; break;
+                    default: i++; break;
+                }
+            }
+            return runs;
+        }
+        static bool Between(double v, double p, double q) => v > Math.Min(p, q) + 1 && v < Math.Max(p, q) - 1;
+        bool Cuts(List<(double X1, double Y1, double X2, double Y2)> h, List<(double X1, double Y1, double X2, double Y2)> v) =>
+            h.Where(r => r.Y1 == r.Y2).Any(r => v.Where(s => s.X1 == s.X2).Any(s => Between(s.X1, r.X1, r.X2) && Between(r.Y1, s.Y1, s.Y2)));
+        List<(double, double, double, double)> ra = Runs(a), rb = Runs(b);
+        return Cuts(ra, rb) || Cuts(rb, ra);
+    }
+
     [Theory]
     [InlineData("FM", true)]
     [InlineData("Sync", true)]
@@ -544,7 +588,9 @@ public class AnalyzerTests
         DiagramLayout layout = PatchDiagram.Layout(patch, "t", PatchDiagram.GroupKeys(patch), monitors: MonitorView.Modules);
 
         List<DiagramNode> scopes = layout.Nodes.Where(n => n.Band == Band.Monitor).OrderBy(n => n.Y).ToList();
-        Assert.Equal(new[] { "Scope", "Full Scope" }, scopes.Select(n => n.Title));
+        // Both watch the same row: the Scope's cable comes from the LFO on a track under it, the Full Scope's straight
+        // from the VCF, so the Scope goes below and the two cables don't cross.
+        Assert.Equal(new[] { "Full Scope", "Scope" }, scopes.Select(n => n.Title));
         double flowRight = layout.Nodes.Where(n => n.Band != Band.Monitor).Max(n => n.X + n.Width);
         Assert.All(scopes, n => Assert.True(n.X > flowRight));
         Assert.True(scopes[1].Y >= scopes[0].Y + scopes[0].Height, "scopes don't overlap");
@@ -554,7 +600,7 @@ public class AnalyzerTests
         Assert.Equal(2, layout.Edges.Count(e => e.IsMonitor));
         Assert.Contains("monitor", SvgRenderer.EdgeClass(layout.Edges.First(e => e.IsMonitor)));
         Assert.DoesNotContain(layout.Nodes, n => n.Watchers.Count > 0);
-        Assert.Equal("VCF", layout.Node(layout.Edges.Single(e => e.To == scopes[1].Key).From).Title);
+        Assert.Equal("LFO", layout.Node(layout.Edges.Single(e => e.To == scopes[1].Key).From).Title);
 
         // The overview folds the two into one box, still in the column.
         DiagramLayout overview = PatchDiagram.Layout(patch, "t", monitors: MonitorView.Modules);

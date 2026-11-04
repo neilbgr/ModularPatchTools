@@ -144,7 +144,9 @@
 .vpd-edge.sig-gate path { stroke-width: 1.5; }
 .vpd-edge.merged path:not(.hit) { stroke-width: 4; }
 /* Cables to scopes and displays only watch a signal: thin and dashed, in the signal's color. */
-.vpd-edge.monitor path:not(.hit) { stroke-width: 1.2; stroke-dasharray: 5 4; }
+/* What a scope watches: dashed, as thick as the signal and the cables it stands for (two for L/R). */
+.vpd-edge.monitor path:not(.hit) { stroke-dasharray: 5 4; }
+.vpd-edge.monitor:is(.merged, .sig-audio) path:not(.hit) { stroke-dasharray: 10 6; }
 /* Feedback: dash-dot, unlike the plain dashes of what a scope watches. */
 .vpd-edge.feedback path:not(.hit) { stroke-dasharray: 11 3 2 3; }
 .vpd-edge.legend-feedback { --sig-color: var(--vpd-muted); }

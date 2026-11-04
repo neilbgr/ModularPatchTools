@@ -37,6 +37,9 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - In a loop, the cable going back into a modulation input (a mixer's level CV, an oscillator's FM…) is the one drawn
   as feedback, so the signal path keeps reading left to right.
 - The audio interface the sound leaves through stays in the last column, even when a loop could pull it back.
+- Scopes and displays watching the same signal (a loudness meter and a VU meter on the master) are stacked in the
+  order their cables come in, so the cables no longer cross.
+- A scope's cables are as thick as the signal and the cables they stand for (an L/R pair is a thick line), still dashed.
 - An insert that also feeds another module (a reverb in a filter's insert feeding a detector) no longer has its
   send arrow landing on its own output: the send and the return take the top slot of their side.
 
