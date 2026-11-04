@@ -287,7 +287,13 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-info dt { color: var(--vpd-muted); }
 .vpd-info dd { margin: 0; overflow-wrap: anywhere; }
 .vpd-info dd ul.loops { margin: 0; padding: 0; list-style: none; }
-.vpd-info .info-option { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; color: var(--vpd-muted); cursor: pointer; }
+.vpd-info .info-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; margin: 0 0 8px; }
+.vpd-info .library-all { font-size: 13px; text-underline-offset: 3px; }
+.vpd-info button.instances { margin-left: 6px; padding: 0 6px; border: 1px solid var(--vpd-line); border-radius: 9px; background: none; color: var(--vpd-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.vpd-info button.instances:hover { color: var(--vpd-ink); }
+.vpd-info tr.instance td { color: var(--vpd-muted); font-size: 13px; }
+.vpd-info tr.instance td:first-child { padding-left: 34px; }
+.vpd-info .info-option { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: var(--vpd-muted); cursor: pointer; }
 .vpd-info table { border-collapse: collapse; font-size: 14px; width: 100%; max-width: 960px; }
 .vpd-info th, .vpd-info td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--vpd-line); }
 .vpd-info th { color: var(--vpd-muted); font-weight: 600; }

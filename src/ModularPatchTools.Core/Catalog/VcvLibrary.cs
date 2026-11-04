@@ -30,5 +30,11 @@ public static class VcvLibrary
     /// <param name="size">Width in pixels the Library serves: 100, 200 or 400.</param>
     public static string ScreenshotUrl(string key, int size) => $"{site}/screenshots/{size}/{Escape(key)}.webp";
 
+    /// <summary>
+    /// One Library page listing all these modules ("plugin/model" keys), the link Rack offers for a patch's missing
+    /// modules: from there, each one can be added to the user's account.
+    /// </summary>
+    public static string ModulesUrl(IEnumerable<string> keys) => $"{site}/?modules={string.Join(",", keys.Distinct(StringComparer.Ordinal).Select(Escape))}";
+
     private static string Escape(string key) => string.Join("/", key.Split('/').Select(Uri.EscapeDataString));
 }

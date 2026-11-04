@@ -311,11 +311,11 @@ A click on the panel shows it full height; Escape or a click outside closes it.
 
 On a phone or tablet (portrait or landscape), the diagram fills the screen and opens fitted to its width. Drag with a finger anywhere to pan and pinch to zoom. Tap a module box for its ports, details, panel and VCV Library link; tap a library icon once to see the panel, twice to open the page. The exported `.html` page pans, pinches and previews panels the same way.
 
-The **Info** tab tells what the patch is (format, Rack or Cardinal, the Rack version that saved it) and lists every module with its plugin, role and function, linked to its VCV Library page, and whether Cardinal can load it. The **Convert** tab converts it to the other application and downloads the result, or opens it in the app.
+The **Info** tab tells what the patch is (format, Rack or Cardinal, the Rack version that saved it) and lists its modules with their plugin, role and function, linked to their VCV Library page, and whether Cardinal can load them: one row per kind of module, its instances listed when you click its count (*× 2*). A link above the table opens one VCV Library page with all of them, to add the missing ones to your account, as Rack offers when a patch has missing modules. The **Convert** tab converts it to the other application and downloads the result, or opens it in the app.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/info-dark.png">
-  <img alt="The Info tab: format, origin, Rack version, contents, then a table of every module with its plugin, role, function and band" src="docs/screenshots/info-light.png">
+  <img alt="The Info tab: format, origin, Rack version, contents, then a link to all the modules in the VCV Library and a table of the modules by kind, with their plugin, role, function, band and Cardinal support, one kind unfolded to its two instances" src="docs/screenshots/info-light.png">
 </picture>
 
 `make publish-web` builds a static site in `publish/web/wwwroot`, which any static file server can host (no backend needed).

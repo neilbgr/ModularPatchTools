@@ -21,32 +21,45 @@
         }
     </dl>
 
-    <label class="info-option" title="Whether Cardinal can load each module. Also in the Diagram tab's Options.">
-        <input type="checkbox" checked="@ShowCardinal" @onchange="e => ShowCardinalChanged.InvokeAsync((bool)e.Value!)" /> Cardinal compatibility
-    </label>
+    <div class="info-tools">
+        @if (libraryKeys.Count > 0)
+        {
+            <a class="library-all" href="@VcvLibrary.ModulesUrl(libraryKeys)" target="_blank" rel="noopener"
+               title="One VCV Library page with every module of this patch the Library publishes, to add the missing ones to your account (as Rack offers when a patch has missing modules)">Open the @libraryKeys.Count @(libraryKeys.Count == 1 ? "module" : "modules") in the VCV Library ↗</a>
+        }
+        <label class="info-option" title="Whether Cardinal can load each module. Also in the Diagram tab's Options.">
+            <input type="checkbox" checked="@ShowCardinal" @onchange="e => ShowCardinalChanged.InvokeAsync((bool)e.Value!)" /> Cardinal compatibility
+        </label>
+    </div>
     <table>
         <thead><tr><th>Module</th><th>Plugin</th><th>Role</th><th>Does</th><th>Band</th>@if (ShowCardinal) {<th title="Can Cardinal load it? Official DISTRHO build, or only the neilbgr edition">Cardinal</th>}</tr></thead>
         <tbody>
-            @foreach (AnalyzedModule module in Analysis.Modules.OrderBy(m => m.Band).ThenBy(m => m.Title, StringComparer.Ordinal))
+            @foreach (ModuleType type in types)
             {
-                <tr class="role-@module.Role.ToString().ToLowerInvariant()">
+                AnalyzedModule first = type.Instances[0];
+                bool open = expanded.Contains(type.Key);
+                <tr class="role-@first.Role.ToString().ToLowerInvariant()">
                     <td><span class="chip"></span>
-                        @if (VcvLibrary.IsListed(module.Plugin))
+                        @if (VcvLibrary.IsListed(first.Plugin))
                         {
-                            <a href="@VcvLibrary.PageUrl(VcvLibrary.Key(module.Plugin, module.Module.Model))" target="_blank" rel="noopener" title="Open in the VCV Library">@module.Title</a>
+                            <a href="@VcvLibrary.PageUrl(type.Key)" target="_blank" rel="noopener" title="Open in the VCV Library">@type.Name</a>
                         }
                         else
                         {
-                            @module.Title
+                            @type.Name
+                        }
+                        @if (type.Instances.Count > 1)
+                        {
+                            <button class="instances" aria-expanded="@(open ? "true" : "false")" title="@(open ? "Hide" : "List") the @type.Instances.Count instances" @onclick="() => Toggle(type.Key)">@(open ? "▾" : "▸") × @type.Instances.Count</button>
                         }
                     </td>
-                    <td>@module.Plugin</td>
-                    <td>@SvgRenderer.RoleLabel(module.Role)</td>
-                    <td>@ModuleFunctions.Label(module.Function)</td>
-                    <td>@module.Band</td>
+                    <td>@first.Plugin</td>
+                    <td>@SvgRenderer.RoleLabel(first.Role)</td>
+                    <td>@ModuleFunctions.Label(first.Function)</td>
+                    <td>@string.Join(", ", type.Instances.Select(m => m.Band).Distinct())</td>
                     @if (ShowCardinal)
                     {
-                        CardinalSupport support = CardinalModules.Embedded.Check(module.Plugin, module.Module.Model);
+                        CardinalSupport support = CardinalModules.Embedded.Check(first.Plugin, first.Module.Model);
                         <td class="cardinal-@support.Availability.ToString().ToLowerInvariant()">
                             @if (support.Availability == CardinalAvailability.NeilbgrEdition)
                             {
@@ -59,6 +72,23 @@
                         </td>
                     }
                 </tr>
+                @if (open)
+                {
+                    @foreach (AnalyzedModule instance in type.Instances)
+                    {
+                        <tr class="instance role-@instance.Role.ToString().ToLowerInvariant()">
+                            <td>@instance.Title</td>
+                            <td></td>
+                            <td></td>
+                            <td>@(instance.InsertOf is long host ? $"insert of {Analysis.Module(host).Title}" : "")</td>
+                            <td>@instance.Band</td>
+                            @if (ShowCardinal)
+                            {
+                                <td></td>
+                            }
+                        </tr>
+                    }
+                }
             }
         </tbody>
     </table>
@@ -76,5 +106,34 @@
 
     private DetectionResult detection = default!;
 
-    protected override void OnParametersSet() => detection = PatchDetector.Detect(Archive);
+    /// <summary>The modules of one kind (same plugin and model), one row with the count; unfolded, one row each.</summary>
+    private sealed record ModuleType(string Key, string Name, IReadOnlyList<AnalyzedModule> Instances);
+
+    private List<ModuleType> types = new List<ModuleType>();
+    private List<string> libraryKeys = new List<string>();
+    private readonly HashSet<string> expanded = new HashSet<string>(StringComparer.Ordinal);
+
+    protected override void OnParametersSet()
+    {
+        detection = PatchDetector.Detect(Archive);
+        types = Analysis.Modules
+            .GroupBy(m => VcvLibrary.Key(m.Plugin, m.Module.Model))
+            .Select(g => new ModuleType(g.Key, instanceNumber.Replace(g.First().Title, ""), g.OrderBy(m => m.Title, StringComparer.Ordinal).ToList()))
+            .OrderBy(t => t.Instances.Min(m => m.Band)).ThenBy(t => t.Name, StringComparer.Ordinal)
+            .ToList();
+        // Every module of the file, docked expanders included: all of them may be missing from the user's Rack.
+        libraryKeys = Analysis.Patch.Modules.Where(m => VcvLibrary.IsListed(m.Plugin)).Select(m => VcvLibrary.Key(m.Plugin, m.Model))
+            .Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    private void Toggle(string key)
+    {
+        if (!expanded.Remove(key))
+        {
+            expanded.Add(key);
+        }
+    }
+
+    // "ADSR EG #2" is an "ADSR EG".
+    private static readonly System.Text.RegularExpressions.Regex instanceNumber = new System.Text.RegularExpressions.Regex(@" #\d+$");
 }

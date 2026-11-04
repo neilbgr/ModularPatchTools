@@ -144,6 +144,9 @@ public class ExportTests
         Assert.Equal("https://library.vcvrack.com/AmbientModules/LunarFilter", VcvLibrary.PageUrl("AmbientModules/LunarFilter"));
         Assert.Equal("https://library.vcvrack.com/screenshots/200/Fundamental/VCF.webp", VcvLibrary.ScreenshotUrl("Fundamental/VCF", 200));
         Assert.Equal("https://library.vcvrack.com/Some%20Plugin/A%26B", VcvLibrary.PageUrl("Some Plugin/A&B"));
+        // One page for many modules, as Rack opens for a patch's missing modules; slugs escaped, each listed once.
+        Assert.Equal("https://library.vcvrack.com/?modules=Fundamental/VCF,Bogaudio/Bogaudio-LVCO,Some%20Plugin/A%26B%2CC",
+            VcvLibrary.ModulesUrl(new[] { "Fundamental/VCF", "Bogaudio/Bogaudio-LVCO", "Fundamental/VCF", "Some Plugin/A&B,C" }));
         Assert.False(VcvLibrary.IsListed("Cardinal"));
         Assert.True(VcvLibrary.IsListed("Fundamental"));
     }

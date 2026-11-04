@@ -10,6 +10,9 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   from its lowest output just under its box into its lowest input, crossing nothing; such modules count as feedback
   loops (folded boxes hint at them, `inspect` lists them).
 - The Info tab lists the patch's feedback loops.
+- The Info tab groups modules of the same kind on one row, with their count; a click on it lists the instances.
+- The Info tab links to one VCV Library page with all the patch's modules, as Rack does for missing modules, to add
+  them to your account.
 - A **Cardinal compatibility** option, on by default, in the Info tab and the Diagram tab's Options: turned off, the
   Info tab's Cardinal column and the module sheet's Cardinal note go away, for Rack-only users. Remembered by the browser.
 
