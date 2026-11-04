@@ -302,7 +302,7 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-convert { font-size: 14px; }
 .vpd-convert .muted { color: var(--vpd-muted); }
 
-/* Modules tab: the user's own module descriptions */
+/* Catalog tab: the user's own module descriptions */
 .vpd-modules { font-size: 14px; max-width: 960px; }
 .vpd-modules .lead { max-width: 760px; margin: 0 0 12px; }
 .vpd-modules .muted { color: var(--vpd-muted); }

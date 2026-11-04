@@ -3,7 +3,7 @@
 namespace ModularPatchTools.Web;
 
 /// <summary>
-/// A module description being edited in the Modules tab: starts from the user's own description if there is one,
+/// A module description being edited in the Catalog tab: starts from the user's own description if there is one,
 /// else from what the catalog knows (name, tags, port names) with as many ports as the patch's cables use.
 /// </summary>
 public sealed class ModuleDraft

@@ -93,7 +93,7 @@
             <PatchInfoView Analysis="analysis!" Archive="archive!" ShowCardinal="cardinalSupport" ShowCardinalChanged="ToggleCardinalSupport" />
         }
 
-        @if (diagram is not null && tab == Tab.Modules)
+        @if (diagram is not null && tab == Tab.Catalog)
         {
             <UserCatalogView Analysis="analysis!" Catalog="userCatalog" CatalogChanged="SetUserCatalogAsync" EditKey="@editKey" />
         }
@@ -304,18 +304,24 @@
     {
         Diagram,
         Info,
-        Modules,
+        // The user's module catalog (it was called "Modules", which read as the list of the patch's modules).
+        Catalog,
         Convert,
     }
 
     private const string repository = "https://github.com/neilbgr/ModularPatchTools";
 
-    // The user's own module descriptions (Modules tab), on top of the embedded catalog, for every patch.
+    // The user's own module descriptions (Catalog tab), on top of the embedded catalog, for every patch.
     private UserCatalog userCatalog = UserCatalog.Empty;
-    // The module the Modules tab opens in its editor, from a module's sheet.
+    // The module the Catalog tab opens in its editor, from a module's sheet.
     private string? editKey;
 
-    private string TabLabel(Tab t) => t == Tab.Modules && analysis?.Uncatalogued.Count(u => u.PortsUnknown) is int count and > 0 ? $"Modules ({count})" : t.ToString();
+    private string TabLabel(Tab t) => t == Tab.Catalog && analysis?.Uncatalogued.Count(u => u.PortsUnknown) is int count and > 0 ? $"Catalog ({count})" : t.ToString();
+
+    /// <summary>The tab a link asks for, by name ("?tab=info"); "modules", the Catalog tab's old name, still opens it.</summary>
+    private static Tab? TabNamed(string name) =>
+        string.Equals(name, "modules", StringComparison.OrdinalIgnoreCase) ? Tab.Catalog
+        : Enum.GetValues<Tab>().Cast<Tab?>().FirstOrDefault(t => string.Equals(t.ToString(), name, StringComparison.OrdinalIgnoreCase));
 
     private void SelectTab(Tab t)
     {
@@ -326,7 +332,7 @@
     private void DescribeModule(string key)
     {
         editKey = key;
-        tab = Tab.Modules;
+        tab = Tab.Catalog;
     }
 
     /// <summary>"Plugin/Model" of the selected box when it is a single module (not a folded group, not a stand-in).</summary>
@@ -390,7 +396,7 @@
             .Split('&', StringSplitOptions.RemoveEmptyEntries)
             .Select(p => p.Split('=', 2))
             .ToDictionary(p => p[0], p => p.Length > 1 ? Uri.UnescapeDataString(p[1]) : "", StringComparer.Ordinal);
-        if (query.TryGetValue("tab", out string? tabName) && Enum.TryParse(tabName, ignoreCase: true, out Tab requested))
+        if (query.TryGetValue("tab", out string? tabName) && TabNamed(tabName) is Tab requested)
         {
             tab = requested;
         }

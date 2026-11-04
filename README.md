@@ -8,7 +8,7 @@ Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-app-dark.png">
-  <img alt="The web app: a patch's diagram under the Diagram, Info, Modules and Convert tabs, with its layer, view, export and zoom controls" src="docs/screenshots/web-app-light.png">
+  <img alt="The web app: a patch's diagram under the Diagram, Info, Catalog and Convert tabs, with its layer, view, export and zoom controls" src="docs/screenshots/web-app-light.png">
 </picture>
 
 *The web app on a 22-module patch, folded into its main blocks: who plays it, what sequences it, the two voices and the mix bus. Click a block to unfold it.*
@@ -75,7 +75,7 @@ It comes as:
 
 All of them share the same C# libraries, so they always read, convert and draw a patch the same way.
 
-In the web app, switch between the **Diagram**, **Info**, **Modules** and **Convert** tabs.
+In the web app, switch between the **Diagram**, **Info**, **Catalog** and **Convert** tabs.
 
 ## What the diagram shows
 
@@ -187,7 +187,7 @@ Every cable gets an **intent**, a short sentence for why it's there ("plays the 
 - stacked cables on one input (summed by Rack ≥ 2.5, but Cardinal keeps only the first one);
 - cable colors that contradict the port;
 - modules whose role was guessed from their name;
-- modules whose ports are only numbered: not in the catalog yet, closed source (known by name from the VCV Library), or from a private or unpublished plugin. The **Info** tab offers to report published ones as a pre-filled GitHub issue, and the **Modules** tab to describe them yourself (see [Your own modules](#your-own-modules));
+- modules whose ports are only numbered: not in the catalog yet, closed source (known by name from the VCV Library), or from a private or unpublished plugin. The **Info** tab offers to report published ones as a pre-filled GitHub issue, and the **Catalog** tab to describe them yourself (see [Your own modules](#your-own-modules));
 - Surge XT modulation inputs with no target.
 
 ## Layout algorithm
@@ -286,7 +286,7 @@ make test
 make web
 ```
 
-Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=modules` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/ModularPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics, the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
+Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=catalog` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/ModularPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics, the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
 
 - unfold/fold boxes, or use **Overview** / **Unfold all**;
 - the numbered layer chips, in their cable color: a hidden layer's chip shows every layer up to it, a shown one's hides just that layer;
@@ -295,7 +295,7 @@ Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` t
 - hover a box to follow its cables, click a module for its details (its real panel from the VCV Library, ports, links, and a note when official Cardinal can't load it) in a sheet at the bottom, click the panel to see it full height, click a cable to edit its intent;
 - **Export** `.html`, `.svg`, `.dot`, `.mmd` or `.json`.
 
-The **Modules** tab describes modules the catalog doesn't know (see [Your own modules](#your-own-modules)); its label counts the modules of the patch whose ports are only numbered.
+The **Catalog** tab describes modules the catalog doesn't know (see [Your own modules](#your-own-modules)); its label counts the modules of the patch whose ports are only numbered.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/module-sheet-dark.png">
@@ -410,12 +410,12 @@ flowchart LR
 
 A module that neither Cardinal nor the VCV Library knows, such as your own plugin or one not published yet, shows numbered ports (`in#0`) and a role guessed from its name. You can describe it yourself:
 
-- **Web app, Modules tab**: lists the modules of the patch the catalog can't explain. *Describe* opens an editor for the name, role, tags and port names (as Rack shows them when hovering each port, in port order); a module's sheet in the Diagram tab links there too. *Import plugin sources* reads `plugin.json` and the C++ sources (picked files, or a `.zip` of the repository) in the browser and fills every module of the plugin, the same way the catalog itself is built. Descriptions are kept in the browser and apply to every patch. *Export catalog* saves them as a file to keep or share, *Import catalog* reads one back. *What can I import?* explains both imports and offers a commented template, with an entry for each module of the patch the catalog can't explain.
+- **Web app, Catalog tab**: lists the modules of the patch the catalog can't explain. *Describe* opens an editor for the name, role, tags and port names (as Rack shows them when hovering each port, in port order); a module's sheet in the Diagram tab links there too. *Import plugin sources* reads `plugin.json` and the C++ sources (picked files, or a `.zip` of the repository) in the browser and fills every module of the plugin, the same way the catalog itself is built. Descriptions are kept in the browser and apply to every patch. *Export catalog* saves them as a file to keep or share, *Import catalog* reads one back. *What can I import?* explains both imports and offers a commented template, with an entry for each module of the patch the catalog can't explain.
 - **CLI**: `modpatch catalog scan --src MyPlugin` writes `MyPlugin.modules.json`; pass it to `info` or `diagram` with `--catalog`.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/modules-dark.png">
-  <img alt="The Modules tab: a private module being described, with its name, role, tags and the names of its inputs and outputs, above the list of the patch's modules the catalog can't explain" src="docs/screenshots/modules-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/catalog-dark.png">
+  <img alt="The Catalog tab: a private module being described, with its name, role, tags and the names of its inputs and outputs, above the list of the patch's modules the catalog can't explain" src="docs/screenshots/catalog-light.png">
 </picture>
 
 The file has the layout of `catalog/ports.overrides.json`, with an optional role (`Time`, `Pitch`, `Controller`, `Source`, `Modifier`, `Effect`, `Mixer`, `Io`, `Performance`, `Monitor`, `Router`):

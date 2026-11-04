@@ -17,6 +17,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   Info tab's Cardinal column and the module sheet's Cardinal note go away, for Rack-only users. Remembered by the browser.
 
 ### Changed
+- The Modules tab is now the **Catalog** tab: it edits your module catalog, and its old name read as the list of the
+  patch's modules (that list is in the Info tab). Links with `?tab=modules` still open it.
 - Feedback cables are drawn dash-dot (scope links keep their plain dashes) instead of carrying a "↺ feedback" tag; the
   standalone SVG legend explains it.
 - Renamed from VCV Patch Tools to **Modular Patch Tools** (VCV is a trademark of VCV): the repository is now
