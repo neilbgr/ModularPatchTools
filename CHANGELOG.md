@@ -20,6 +20,7 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ### Changed
 - "Your patch never leaves your browser" stands out on the welcome page and at the top of the **?** menu.
+- The sample patch has a scope on its output, to show how scopes and displays are drawn.
 - The **?** menu is easier to read: short sections (Explore, Layers, Cables) with more room, and it stays on screen
   on a phone.
 - The Modules tab is now the **Catalog** tab: it edits your module catalog, and its old name read as the list of the

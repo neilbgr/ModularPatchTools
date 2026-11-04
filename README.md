@@ -13,7 +13,7 @@ Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](
   <img alt="The web app: a patch's diagram under the Diagram, Info, Catalog and Convert tabs, with its layer, view, export and zoom controls" src="docs/screenshots/web-app-light.png">
 </picture>
 
-*The web app on a 22-module patch, folded into its main blocks: who plays it, what sequences it, the two voices and the mix bus. Click a block to unfold it.*
+*The web app on a 23-module patch, folded into its main blocks: who plays it, what sequences it, the two voices and the mix bus, with the scope that watches it on the right. Click a block to unfold it.*
 
 ## Contents
 
