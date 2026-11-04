@@ -61,6 +61,40 @@ public class CatalogTests
         Assert.False(guessed);
     }
 
+    [Theory]
+    [InlineData("Drums")]
+    [InlineData("Percussion")]
+    [InlineData("drum")]
+    public void RackTagAliasesDecideTheRole(string tag)
+    {
+        // dbRackModules Drums is tagged "Drums", Rack's alias of "Drum": it used to fall through to a guessed controller.
+        (Role role, bool guessed) = RoleCatalog.FromJson("{}").Resolve("dbRackModules", "Drums", new ModuleInfo("Drums", new[] { tag }, Array.Empty<string>(), Array.Empty<string>()));
+
+        Assert.Equal(Role.Source, role);
+        Assert.False(guessed);
+    }
+
+    [Theory]
+    [InlineData("Drums", Role.Source)]
+    [InlineData("KickDrum", Role.Source)]
+    [InlineData("Perc8", Role.Source)]
+    [InlineData("DrumSeq", Role.Time)]
+    public void DrumNamesAreGuessedAsVoices(string model, Role expected)
+    {
+        (Role role, bool guessed) = RoleCatalog.FromJson("{}").Resolve("Acme", model, ModuleInfo.Empty);
+
+        Assert.Equal(expected, role);
+        Assert.True(guessed);
+    }
+
+    [Theory]
+    [InlineData("Drums", "Drum")]
+    [InlineData("lfo", "Low-frequency oscillator")]
+    [InlineData(" VCA ", "Voltage-controlled amplifier")]
+    [InlineData("reverb", "Reverb")]
+    [InlineData("Made up", "Made up")]
+    public void TagsTakeRacksOwnName(string tag, string expected) => Assert.Equal(expected, RackTags.Canonical(tag));
+
     [Fact]
     public void RoleGuessedFromSlugIsFlagged()
     {

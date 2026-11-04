@@ -180,7 +180,7 @@ Every cable gets an **intent**, a short sentence for why it's there ("plays the 
 
 ### Diagnostics
 
-`inspect` and the web app list what looks suspicious:
+`inspect` and the web app list what looks suspicious. Under the diagram the list is folded to one line (*⚠ 3 notes about this patch*), opened by a click; the **Info** tab shows it in full:
 
 - stacked cables on one input (summed by Rack ≥ 2.5, but Cardinal keeps only the first one);
 - cable colors that contradict the port;

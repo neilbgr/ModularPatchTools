@@ -275,14 +275,18 @@
                 </div>
             }
 
+            @* Folded to one line so the diagram keeps the page: the Info tab lists the same notes in full. *@
             @if (diagram.Diagnostics.Count > 0)
             {
-                <ul class="vpd-diag">
-                    @foreach (string diagnostic in diagram.Diagnostics)
-                    {
-                        <li>@diagnostic</li>
-                    }
-                </ul>
+                <details class="vpd-diag notes">
+                    <summary>⚠ @diagram.Diagnostics.Count @(diagram.Diagnostics.Count == 1 ? "note" : "notes") about this patch</summary>
+                    <ul>
+                        @foreach (string diagnostic in diagram.Diagnostics)
+                        {
+                            <li>@diagnostic</li>
+                        }
+                    </ul>
+                </details>
             }
         }
     </div>

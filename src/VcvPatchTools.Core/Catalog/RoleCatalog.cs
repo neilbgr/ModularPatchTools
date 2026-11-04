@@ -14,7 +14,8 @@ public sealed class RoleCatalog
         Converters = { new JsonStringEnumConverter() },
     };
 
-    // Ordered: the first matching tag wins, so the most specific tags come first.
+    // Ordered: the first matching tag wins, so the most specific tags come first. Rack's names only: aliases ("LFO", "VCA",
+    // "Drums") are turned into them first, see RackTags.Canonical.
     private static readonly (string Tag, Role Role)[] tagRoles =
     {
         // A module tagged both "Synth voice"/"Oscillator" and "Envelope generator" is a voice with its own VCA, not a controller.
@@ -28,7 +29,6 @@ public sealed class RoleCatalog
         ("Logic", Role.Time),
         ("Envelope generator", Role.Controller),
         ("Low-frequency oscillator", Role.Controller),
-        ("LFO", Role.Controller),
         ("Random", Role.Controller),
         ("Sample and hold", Role.Controller),
         ("Slew limiter", Role.Controller),
@@ -36,14 +36,11 @@ public sealed class RoleCatalog
         ("Controller", Role.Controller),
         ("Switch", Role.Controller),
         ("Voltage-controlled oscillator", Role.Source),
-        ("VCO", Role.Source),
         ("Oscillator", Role.Source),
         ("Noise", Role.Source),
         ("Sampler", Role.Source),
         ("Drum", Role.Source),
         ("Physical modeling", Role.Source),
-        ("Synth voice", Role.Source),
-        ("Visual", Role.Monitor),
         ("Reverb", Role.Effect),
         ("Delay", Role.Effect),
         ("Chorus", Role.Effect),
@@ -52,10 +49,7 @@ public sealed class RoleCatalog
         ("Mixer", Role.Mixer),
         ("Effect", Role.Effect),
         ("Filter", Role.Modifier),
-        ("VCF", Role.Modifier),
-        ("Amplifier", Role.Modifier),
         ("Voltage-controlled amplifier", Role.Modifier),
-        ("VCA", Role.Modifier),
         ("Waveshaper", Role.Modifier),
         ("Distortion", Role.Modifier),
         ("Equalizer", Role.Modifier),
@@ -63,7 +57,6 @@ public sealed class RoleCatalog
         ("Limiter", Role.Modifier),
         ("Dynamics", Role.Modifier),
         ("Low-pass gate", Role.Modifier),
-        ("Lowpass gate", Role.Modifier),
         ("External", Role.Io),
     };
 
@@ -72,6 +65,7 @@ public sealed class RoleCatalog
         ("Host", Role.Io), ("Audio", Role.Io), ("MIDI", Role.Io),
         ("Seq", Role.Time), ("Clock", Role.Time), ("Clk", Role.Time),
         ("Quant", Role.Pitch),
+        ("Drum", Role.Source), ("Kick", Role.Source), ("Snare", Role.Source), ("Perc", Role.Source), ("Clap", Role.Source), ("Cymbal", Role.Source),
         ("LFO", Role.Controller), ("ADSR", Role.Controller), ("Env", Role.Controller), ("Random", Role.Controller), ("Slew", Role.Controller),
         ("VCO", Role.Source), ("Osc", Role.Source), ("Noise", Role.Source),
         ("Reverb", Role.Effect), ("Delay", Role.Effect), ("Mix", Role.Mixer),
@@ -101,7 +95,8 @@ public sealed class RoleCatalog
 
         foreach ((string tag, Role role) in tagRoles)
         {
-            if (info.Tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))
+            // Tags under Rack's own names: "Drums" and "Percussion" are "Drum", as Rack reads them.
+            if (info.Tags.Any(t => string.Equals(RackTags.Canonical(t), tag, StringComparison.OrdinalIgnoreCase)))
             {
                 return (role, false);
             }
