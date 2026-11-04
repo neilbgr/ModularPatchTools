@@ -5,6 +5,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-04
+
 ### Fixed
 - A module's panel preview could stay blank for good: one failed load (network, the Library being slow) marked it as
   missing forever. A failure is now remembered for a day only, the old list is dropped, and a broken image is tried again.
@@ -147,7 +149,8 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.2.0...v1.3.0
