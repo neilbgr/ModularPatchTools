@@ -5,6 +5,10 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+### Fixed
+- A module's panel preview could stay blank for good: one failed load (network, the Library being slow) marked it as
+  missing forever. A failure is now remembered for a day only, the old list is dropped, and a broken image is tried again.
+
 ## [1.4.0] - 2026-11-04
 
 ### Added

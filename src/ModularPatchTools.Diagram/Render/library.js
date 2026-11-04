@@ -2,7 +2,8 @@
 // panels (.lib[data-panels], "plugin/model*count …").
 // Shared: embedded in the static HTML export, and copied to the Blazor app's wwwroot/js at build time.
 // Nothing is fetched until an icon is hovered; a loaded image is kept for the page's life (and the browser's HTTP cache
-// keeps it longer), and a module the Library doesn't have is remembered, so it is never asked for again.
+// keeps it longer). A module whose image failed is remembered for a day only: a failure may be the network or the
+// Library being slow, not a module it lacks, so it is asked for again later rather than never.
 // Returns a handle whose dispose() removes the preview card and the listeners (the app calls it when the diagram goes away).
 window.vpdLibraryPreview = function (container) {
   if (!container || container.dataset.vpdLibrary) return { dispose() { } };
@@ -13,12 +14,20 @@ window.vpdLibraryPreview = function (container) {
     listeners.push([type, handler, options]);
   };
   const site = 'https://library.vcvrack.com/screenshots/';
-  const missingKey = 'vpd-library-missing';
+  // Version 2: "key → time of the failure". Version 1 was a plain list kept forever: left behind, read as nothing.
+  const missingKey = 'vpd-library-missing-v2';
+  const missingFor = 24 * 60 * 60 * 1000;
   const groupLimit = 12;
   const images = new Map();
   let missing;
-  try { missing = new Set(JSON.parse(localStorage.getItem(missingKey) || '[]')); } catch { missing = new Set(); }
-  const remember = () => { try { localStorage.setItem(missingKey, JSON.stringify([...missing])); } catch { } };
+  try {
+    const saved = JSON.parse(localStorage.getItem(missingKey) || '{}');
+    const now = Date.now();
+    missing = new Map(Object.entries(saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {})
+      .filter(([, time]) => typeof time === 'number' && now - time < missingFor));
+  } catch { missing = new Map(); }
+  try { localStorage.removeItem('vpd-library-missing'); } catch { }
+  const remember = () => { try { localStorage.setItem(missingKey, JSON.stringify(Object.fromEntries(missing))); } catch { } };
   const url = (key, size) => site + size + '/' + key.split('/').map(encodeURIComponent).join('/') + '.webp';
   const selector = '.lib[data-library], .lib[data-panels]';
 
@@ -73,6 +82,11 @@ window.vpdLibraryPreview = function (container) {
   function image(key) {
     if (missing.has(key)) return null;
     let img = images.get(key);
+    // Broken without an error event, or stuck: start over rather than show an empty card for the page's life.
+    if (img && img.complete && img.naturalWidth === 0) {
+      images.delete(key);
+      img = null;
+    }
     if (!img) {
       img = new Image();
       img.alt = key;
@@ -81,7 +95,7 @@ window.vpdLibraryPreview = function (container) {
       img.addEventListener('load', place);
       img.addEventListener('error', () => {
         images.delete(key);
-        missing.add(key);
+        missing.set(key, Date.now());
         remember();
         markMissing(key);
         if (link) render(link);
