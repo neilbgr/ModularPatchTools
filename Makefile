@@ -1,5 +1,5 @@
-CLI     := src/VcvPatchTools.Cli
-WEB     := src/VcvPatchTools.Web
+CLI     := src/ModularPatchTools.Cli
+WEB     := src/ModularPatchTools.Web
 CONFIG  := Release
 PLUGINS ?= ../Cardinal/plugins
 
@@ -7,7 +7,7 @@ PLUGINS ?= ../Cardinal/plugins
 
 # The version every binary is built with (Directory.Build.props); a release is the tag v<version>.
 version:
-	@dotnet msbuild src/VcvPatchTools.Core -getProperty:Version
+	@dotnet msbuild src/ModularPatchTools.Core -getProperty:Version
 
 build:
 	dotnet build

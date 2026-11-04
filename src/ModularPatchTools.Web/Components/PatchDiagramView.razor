@@ -1,0 +1,335 @@
+﻿@using System.Globalization
+@using ModularPatchTools.Diagram.Render
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* Renders a DiagramLayout as native SVG so folding, the pinned module and cable selection are handled in C#; hovering
+   a box is left to highlight.js (shared with the static export), so it doesn't re-render the diagram.
+   Same elements, classes and attributes as SvgRenderer (PatchDiagramViewTests checks it), so diagram.css and the shared
+   scripts work on both. On purpose, the app alone has: lane titles drawn on top of everything (they follow the scroll,
+   see vpd.js) instead of in the bands, click hints in the tooltips, and the selected / pinned state classes. *@
+
+<div class="@RootClass" @ref="root">
+    <div class="vpd-toolbar">
+        @Tools
+        <div class="group zoom">
+            <button title="Zoom out (or Ctrl + wheel)" @onclick="() => SetZoom(zoom / 1.15)">−</button>
+            <span class="vpd-zoom-label">@((int)Math.Round(zoom * 100))%</span>
+            <button title="Zoom in (or Ctrl + wheel)" @onclick="() => SetZoom(zoom * 1.15)">+</button>
+            <button @onclick="() => SetZoom(1)">100%</button>
+            <button title="Fit the width, without going below a readable size" @onclick="FitAsync">Fit</button>
+        </div>
+    </div>
+    <div class="vpd-scroll" @ref="scroller">
+        <svg class="vpd-svg" viewBox="0 0 @F(Layout.Width) @F(Layout.Height)" width="@F(Layout.Width * zoom)" height="@F(Layout.Height * zoom)">
+            <defs>
+                @foreach (SignalType signal in Enum.GetValues<SignalType>())
+                {
+                    string key = SvgRenderer.SignalClass(signal);
+                    <marker id="vpd-arrow-@key" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="userSpaceOnUse" markerWidth="@LayeredLayout.ArrowLength" markerHeight="@LayeredLayout.ArrowLength" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="vpd-marker-@key" />
+                    </marker>
+                }
+            </defs>
+
+            <g class="vpd-bands">
+                @foreach (DiagramBand band in Layout.Bands)
+                {
+                    (double bandX, double bandWidth) = Layout.Extent(band);
+                    <g class="@SvgRenderer.BandClass(band)" @onclick="() => BandClickedAsync(band)">
+                        @if (band.Group is not null)
+                        {
+                            <title>Click to fold this group back</title>
+                        }
+                        <rect x="@F(bandX)" y="@F(band.Y)" width="@F(bandWidth)" height="@F(band.Height)" rx="8" />
+                    </g>
+                }
+            </g>
+
+            <g class="vpd-edges">
+                @foreach (DiagramEdge edge in Layout.Edges)
+                {
+                    string key = SvgRenderer.SignalClass(edge.Signal);
+                    <g class="@SvgRenderer.EdgeClass(edge) @EdgeState(edge)" data-from="@edge.From" data-to="@edge.To" @onclick="() => OnEdgeSelected.InvokeAsync(edge)">
+                        <title>@SvgRenderer.EdgeTooltip(edge)</title>
+                        <path class="hit" d="@edge.Path" />
+                        <path d="@edge.Path" marker-end="url(#vpd-arrow-@key)" />
+                    </g>
+                }
+            </g>
+
+            <g class="vpd-nodes">
+                @foreach (DiagramNode node in Layout.Nodes)
+                {
+                    <g class="@SvgRenderer.NodeClass(node) @(highlighted.Contains(node.Key) ? "hl" : "")" data-id="@node.Key"
+                       @onclick="() => NodeClickedAsync(node)">
+                        <title>@string.Join("\n", node.Details)@(node.IsFolded ? "\n\nClick to unfold" : "")</title>
+                        @if (node.IsFolded)
+                        {
+                            <rect class="stack" x="@F(node.X + 4)" y="@F(node.Y + 4)" width="@F(node.Width)" height="@F(node.Height)" rx="6" />
+                        }
+                        @foreach (PortTab tab in node.Tabs)
+                        {
+                            <g class="tab sig-@SvgRenderer.SignalClass(tab.Signal)">
+                                <title>@tab.Tooltip</title>
+                                <rect x="@F(SvgRenderer.TabX(node, tab))" y="@F(tab.Y - (PortTabs.Height / 2))" width="@F(tab.Width)" height="@F(PortTabs.Height)" rx="3" />
+                                @Text(SvgRenderer.TabX(node, tab) + (tab.Width / 2), tab.Y + 3.2, null, tab.Text, "middle")
+                            </g>
+                        }
+                        <rect class="box" x="@F(node.X)" y="@F(node.Y)" width="@F(node.Width)" height="@F(node.Height)" rx="6" />
+                        <rect class="stripe" x="@F(node.X)" y="@F(node.Y)" width="5" height="@F(node.Height)" rx="2" />
+                        @Text(node.X + 14, node.Y + 20, "title", SvgRenderer.Fit(node.Title, SvgRenderer.TitleChars(node)))
+                        @if (node.Function is ModuleFunction function)
+                        {
+                            <path class="icon" transform="translate(@F(SvgRenderer.IconX(node)) @F(SvgRenderer.IconY(node)))" d="@Icons.Path(function)" />
+                        }
+                        @Text(node.X + 14, node.Y + 36, "subtitle", SvgRenderer.Fit(SvgRenderer.NodeSubtitle(node), SvgRenderer.SubtitleChars(node)))
+                        @if (node.LibraryKey is string library)
+                        {
+                            @* A link of its own: opening the Library page doesn't also unfold or select the box. *@
+                            <a class="lib" href="@VcvLibrary.PageUrl(library)" target="_blank" rel="noopener" data-library="@library" aria-label="@SvgRenderer.LibraryTooltip" @onclick:stopPropagation="true">
+                                <rect x="@F(SvgRenderer.LibraryX(node) - 2)" y="@F(SvgRenderer.LibraryY(node) - 2)" width="@F(LibraryIcon.Size + 4)" height="@F(LibraryIcon.Size + 4)" rx="3" />
+                                <path transform="translate(@F(SvgRenderer.LibraryX(node)) @F(SvgRenderer.LibraryY(node)))" d="@LibraryIcon.Path" />
+                            </a>
+                        }
+                        else if (node.LibraryPanels.Count > 0)
+                        {
+                            <g class="lib panels" data-panels="@SvgRenderer.PanelsAttribute(node)" data-unlisted="@node.UnlistedCount" aria-label="@SvgRenderer.PanelsTooltip">
+                                <rect x="@F(SvgRenderer.LibraryX(node) - 2)" y="@F(SvgRenderer.LibraryY(node) - 2)" width="@F(LibraryIcon.Size + 4)" height="@F(LibraryIcon.Size + 4)" rx="3" />
+                                <path transform="translate(@F(SvgRenderer.LibraryX(node)) @F(SvgRenderer.LibraryY(node)))" d="@LibraryIcon.PanelsPath" />
+                            </g>
+                        }
+                        @if (node.Watchers.Count > 0)
+                        {
+                            <g class="watch">
+                                <title>@SvgRenderer.WatchTooltip(node)</title>
+                                <circle cx="@F(node.X + node.Width - 2)" cy="@F(node.Y + 2)" r="10" />
+                                @Text(node.X + node.Width - 2, node.Y + 6, null, "👁", "middle")
+                            </g>
+                        }
+                    </g>
+                }
+            </g>
+
+            @* Labels last, over every cable and box, with their cable's classes so layers and hover still apply. *@
+            <g class="vpd-labels">
+                @foreach (DiagramEdge edge in Layout.Edges.Where(e => e.Intent.Length > 0))
+                {
+                    <g class="@SvgRenderer.EdgeClass(edge) @EdgeState(edge)" data-from="@edge.From" data-to="@edge.To">
+                        @Text(edge.LabelX, SvgRenderer.IntentY(edge), "label", edge.Label, "middle")
+                    </g>
+                }
+            </g>
+
+            @* The lanes' titles on top of everything: they follow the scroll (vpd.js) so a lane's name stays in sight. *@
+            <g class="vpd-band-titles">
+                @foreach (DiagramBand band in Layout.Bands)
+                {
+                    (double bandX, double bandWidth) = Layout.Extent(band);
+                    <g class="@SvgRenderer.BandClass(band) vpd-band-title" data-x="@F(bandX)" data-y="@F(band.Y)" data-w="@F(bandWidth)" data-h="@F(band.Height)"
+                       @onclick="() => BandClickedAsync(band)">
+                        <rect class="plate" x="@F(bandX + 4)" y="@F(band.Y + 4)" height="22" rx="5" />
+                        @Text(bandX + 12, band.Y + 19, null, band.Group is null ? band.Title : $"{band.Title}  ⊟")
+                    </g>
+                }
+            </g>
+        </svg>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DiagramLayout Layout { get; set; } = default!;
+
+    [Parameter] public IReadOnlySet<string> HiddenLayers { get; set; } = new HashSet<string>();
+
+    [Parameter] public bool ShowIntents { get; set; }
+
+    [Parameter] public string? SelectedEdge { get; set; }
+
+    [Parameter] public EventCallback<DiagramEdge> OnEdgeSelected { get; set; }
+
+    [Parameter] public EventCallback<DiagramNode> OnNodeClicked { get; set; }
+
+    [Parameter] public EventCallback<DiagramBand> OnBandClicked { get; set; }
+
+    /// <summary>A module whose cables stay highlighted while nothing is hovered (the one tapped, on a phone).</summary>
+    [Parameter] public string? PinnedNode { get; set; }
+
+    /// <summary>The page's own controls, on the same row as the zoom.</summary>
+    [Parameter] public RenderFragment? Tools { get; set; }
+
+    private ElementReference root;
+    private ElementReference scroller;
+    private double minZoom = Resources.MinZoom;
+    private DotNetObjectReference<PatchDiagramView>? selfReference;
+    // The scripts wired to the scroll box (panzoom.js, library.js, highlight.js), each undone when the view goes away.
+    private IJSObjectReference? panZoom;
+    private IJSObjectReference? libraryPreview;
+    private IJSObjectReference? hover;
+    // The layout the hover highlight last looked at: a new one is redrawn, and may no longer have the hovered box.
+    private DiagramLayout? hoverLayout;
+    private double zoom = 1;
+    private HashSet<string> highlighted = new HashSet<string>();
+    private HashSet<string> highlightedEdges = new HashSet<string>();
+    // Folding or unfolding a group moves it to another band: the view scrolls by as much, so it stays under the pointer.
+    private (string Group, double BandY)? anchor;
+    private DiagramLayout? anchoredLayout;
+    private double pendingShift;
+    // The pinned module last brought into view, so it's done once per selection.
+    private string? revealed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pendingShift != 0)
+        {
+            double shift = pendingShift;
+            pendingShift = 0;
+            await JS.InvokeVoidAsync("vpdShiftScroll", scroller, shift);
+        }
+        if (PinnedNode != revealed)
+        {
+            revealed = PinnedNode;
+            if (Layout.Nodes.FirstOrDefault(n => n.Key == PinnedNode) is DiagramNode node)
+            {
+                // Its details open in a sheet over the bottom of the screen: keep the module above it.
+                await JS.InvokeVoidAsync("vpdRevealAboveSheet", scroller, node.X * zoom, node.Y * zoom, node.Width * zoom, node.Height * zoom);
+            }
+        }
+        if (firstRender)
+        {
+            selfReference = DotNetObjectReference.Create(this);
+            panZoom = await JS.InvokeAsync<IJSObjectReference>("vpdPanZoomDotNet", scroller, selfReference);
+            libraryPreview = await JS.InvokeAsync<IJSObjectReference>("vpdLibraryPreview", scroller);
+            hover = await JS.InvokeAsync<IJSObjectReference>("vpdHoverHighlight", scroller);
+            hoverLayout = Layout;
+            // A phone: the diagram fills the screen, fitted to its width; zoomed out further than on a desktop.
+            if (await JS.InvokeAsync<bool>("vpdCompact"))
+            {
+                minZoom = Resources.MinZoomCompact;
+                await FitAsync();
+                await JS.InvokeVoidAsync("vpdScrollIntoView", root);
+                StateHasChanged();
+            }
+        }
+        else if (hover is not null && !ReferenceEquals(Layout, hoverLayout))
+        {
+            hoverLayout = Layout;
+            await hover.InvokeVoidAsync("refresh");
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        ApplyHighlight();
+        if (anchor is (string group, double oldY) && !ReferenceEquals(Layout, anchoredLayout) && GroupBandY(group) is double newY)
+        {
+            pendingShift = (newY - oldY) * zoom;
+        }
+        anchor = null;
+    }
+
+    private Task NodeClickedAsync(DiagramNode node)
+    {
+        if (node.IsFolded)
+        {
+            Anchor(node.Group, BandAt(node.Y));
+        }
+        return OnNodeClicked.InvokeAsync(node);
+    }
+
+    private Task BandClickedAsync(DiagramBand band)
+    {
+        if (band.Group is not null)
+        {
+            Anchor(band.Group, band.Y);
+        }
+        return OnBandClicked.InvokeAsync(band);
+    }
+
+    private void Anchor(string group, double? bandY)
+    {
+        anchor = bandY is double y ? (group, y) : null;
+        anchoredLayout = Layout;
+    }
+
+    /// <summary>Top of the band a group is drawn in: its own lane when unfolded, the band holding its box when folded.</summary>
+    private double? GroupBandY(string group) =>
+        Layout.Bands.FirstOrDefault(b => b.Group == group && !b.IsVertical)?.Y
+        ?? (Layout.Nodes.FirstOrDefault(n => n.IsFolded && n.Group == group) is DiagramNode node ? BandAt(node.Y) : null);
+
+    private double? BandAt(double y) =>
+        Layout.Bands.Where(b => !b.IsVertical && b.Y <= y && y < b.Y + b.Height).Select(b => (double?)b.Y).FirstOrDefault();
+
+    /// <summary>Ctrl + wheel, called from panzoom.js.</summary>
+    [JSInvokable]
+    public void ZoomBy(double factor)
+    {
+        SetZoom(zoom * factor);
+        StateHasChanged();
+    }
+
+    private void SetZoom(double value) => zoom = Math.Clamp(value, minZoom, Resources.MaxZoom);
+
+    private async Task FitAsync() =>
+        SetZoom(await JS.InvokeAsync<double>("vpdFitZoom", scroller, Layout.Width, minZoom, Resources.MaxZoom));
+
+    public async ValueTask DisposeAsync()
+    {
+        // The listeners go first, so nothing calls back into this view once its reference is disposed.
+        foreach (IJSObjectReference? handle in new[] { hover, libraryPreview, panZoom })
+        {
+            if (handle is null)
+            {
+                continue;
+            }
+            try
+            {
+                await handle.InvokeVoidAsync("dispose");
+                await handle.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is going away: nothing left to undo.
+            }
+            catch (JSException)
+            {
+                // Already gone on the page's side: nothing left to undo.
+            }
+        }
+        selfReference?.Dispose();
+    }
+
+    private string RootClass =>
+        string.Join(" ", new[] { "vpd-root", "interactive" }
+            .Concat(HiddenLayers.Select(l => $"hide-{l}"))
+            .Append(ShowIntents ? "show-intents" : "")
+            .Append(highlighted.Count > 0 ? "focus" : ""));
+
+    private string EdgeState(DiagramEdge edge) =>
+        (highlightedEdges.Contains(edge.Key) ? "hl " : "") + (edge.Key == SelectedEdge ? "selected hl" : "");
+
+    /// <summary>The pinned module's cables (a hovered one's are highlight.js's, shown over these).</summary>
+    private void ApplyHighlight()
+    {
+        string? nodeKey = PinnedNode;
+        if (nodeKey is null)
+        {
+            highlighted = new HashSet<string>();
+            highlightedEdges = new HashSet<string>();
+            return;
+        }
+        List<DiagramEdge> edges = Layout.Edges.Where(e => e.From == nodeKey || e.To == nodeKey).ToList();
+        highlightedEdges = edges.Select(e => e.Key).ToHashSet();
+        highlighted = edges.SelectMany(e => new[] { e.From, e.To }).Append(nodeKey).ToHashSet();
+    }
+
+    /// <summary>SVG &lt;text&gt; is a reserved tag in Razor, so text elements are emitted as escaped markup.</summary>
+    private static MarkupString Text(double x, double y, string? cssClass, string content, string? anchor = null)
+    {
+        string cls = cssClass is null ? "" : $" class=\"{cssClass}\"";
+        string anchorAttr = anchor is null ? "" : $" text-anchor=\"{anchor}\"";
+        return new MarkupString($"<text{cls} x=\"{F(x)}\" y=\"{F(y)}\"{anchorAttr}>{System.Net.WebUtility.HtmlEncode(content)}</text>");
+    }
+
+    private static string F(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+}

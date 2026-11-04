@@ -1,4 +1,4 @@
-# Builds the vcvpatch command line for every platform, the static web app and a source archive, the way Cardinal does:
+# Builds the modpatch command line for every platform, the static web app and a source archive, the way Cardinal does:
 # every push and pull request leaves them as workflow artifacts (named after the commit), and pushing a tag v<Version>
 # publishes them as a GitHub release (named after the version).
 # Releasing: bump <Version> in Directory.Build.props, rename CHANGELOG.md's Unreleased section to that version (its
@@ -36,7 +36,7 @@ jobs:
       - id: version
         name: Read the version
         run: |
-          version=$(dotnet msbuild src/VcvPatchTools.Core -getProperty:Version)
+          version=$(dotnet msbuild src/ModularPatchTools.Core -getProperty:Version)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
@@ -75,7 +75,7 @@ jobs:
           - { rid: osx-arm64, os: macos-latest }
     runs-on: ${{ matrix.os }}
     env:
-      NAME: VcvPatchTools-${{ needs.version.outputs.label }}-${{ matrix.rid }}
+      NAME: ModularPatchTools-${{ needs.version.outputs.label }}-${{ matrix.rid }}
     steps:
       - uses: actions/checkout@v7
 
@@ -86,7 +86,7 @@ jobs:
       - name: Publish
         shell: bash
         run: >
-          dotnet publish src/VcvPatchTools.Cli -c Release -r ${{ matrix.rid }} --self-contained
+          dotnet publish src/ModularPatchTools.Cli -c Release -r ${{ matrix.rid }} --self-contained
           -p:PublishSingleFile=true -p:ContinuousIntegrationBuild=true -o "dist/$NAME"
 
       - name: Pack
@@ -110,7 +110,7 @@ jobs:
     needs: [version, test]
     runs-on: ubuntu-24.04
     env:
-      NAME: VcvPatchTools-${{ needs.version.outputs.label }}-web
+      NAME: ModularPatchTools-${{ needs.version.outputs.label }}-web
     steps:
       - uses: actions/checkout@v7
 
@@ -118,10 +118,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # Served from the root of any static file server (GitHub Pages' /VcvPatchTools/ base is set by pages.yml only).
+      # Served from the root of any static file server (GitHub Pages' /ModularPatchTools/ base is set by pages.yml only).
       - name: Publish
         run: |
-          dotnet publish src/VcvPatchTools.Web -c Release -p:ContinuousIntegrationBuild=true -o publish/web
+          dotnet publish src/ModularPatchTools.Web -c Release -p:ContinuousIntegrationBuild=true -o publish/web
           mv publish/web/wwwroot "$NAME"
           cp LICENSE "$NAME/"
           zip -qr "$NAME.zip" "$NAME"
@@ -135,13 +135,13 @@ jobs:
     needs: version
     runs-on: ubuntu-24.04
     env:
-      NAME: VcvPatchTools-${{ needs.version.outputs.label }}-src
+      NAME: ModularPatchTools-${{ needs.version.outputs.label }}-src
     steps:
       - uses: actions/checkout@v7
 
       # The generated catalogs are committed: the archive builds as is, without the Cardinal sources.
       - name: Archive
-        run: git archive --format=tar.gz --prefix="VcvPatchTools-${{ needs.version.outputs.label }}/" -o "$NAME.tar.gz" HEAD
+        run: git archive --format=tar.gz --prefix="ModularPatchTools-${{ needs.version.outputs.label }}/" -o "$NAME.tar.gz" HEAD
 
       - uses: actions/upload-artifact@v7
         with:
@@ -182,7 +182,7 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
-          name: VCV Patch Tools ${{ needs.version.outputs.version }}
+          name: Modular Patch Tools ${{ needs.version.outputs.version }}
           prerelease: ${{ contains(needs.version.outputs.version, '-') }}
           body_path: release-notes.md
           files: dist/*

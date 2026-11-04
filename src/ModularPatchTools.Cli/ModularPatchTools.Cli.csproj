@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>modpatch</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ModularPatchTools.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ModularPatchTools.Bridge\ModularPatchTools.Bridge.csproj" />
+    <ProjectReference Include="..\ModularPatchTools.Diagram\ModularPatchTools.Diagram.csproj" />
+  </ItemGroup>
+
+</Project>

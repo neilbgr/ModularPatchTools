@@ -1,8 +1,10 @@
-﻿# VcvPatchTools
+﻿# ModularPatchTools
 
 Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](https://github.com/DISTRHO/Cardinal) `.vcv` patches: a block diagram that explains how a patch works, what a patch file holds, and a converter between Rack and Cardinal.
 
-**Try it online: [neilbgr.github.io/VcvPatchTools](https://neilbgr.github.io/VcvPatchTools/)**. Drop a `.vcv` file on the page, or open the sample patch. The patch is read in your browser and never uploaded.
+**Try it online: [neilbgr.github.io/ModularPatchTools](https://neilbgr.github.io/ModularPatchTools/)**. Drop a `.vcv` file on the page, or open the sample patch. The patch is read in your browser and never uploaded.
+
+*Formerly VCV Patch Tools. VCV and VCV Rack are trademarks of VCV; this project is not affiliated with VCV.*
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/web-app-dark.png">
@@ -41,7 +43,7 @@ Understand, inspect and convert [VCV Rack](https://vcvrack.com/) and [Cardinal](
 
 [MIT](LICENSE)
 
-The web app ships the [Barlow](https://github.com/jpt/barlow) typeface (SIL Open Font License 1.1, see `src/VcvPatchTools.Web/wwwroot/fonts/OFL.txt`).
+The web app ships the [Barlow](https://github.com/jpt/barlow) typeface (SIL Open Font License 1.1, see `src/ModularPatchTools.Web/wwwroot/fonts/OFL.txt`).
 
 ## AI disclosure
 
@@ -68,7 +70,7 @@ A dense patch is a wall of cables, knobs and lights. This tool reads the patch f
 It comes as:
 
 - a **web app** (Blazor WebAssembly, runs entirely in the browser: the patch is never uploaded);
-- a **command-line tool** (`vcvpatch`) to inspect, convert or render a patch;
+- a **command-line tool** (`modpatch`) to inspect, convert or render a patch;
 - exports to a **self-contained interactive HTML page**, **SVG**, **Graphviz** (`.dot`), **Mermaid** (`.mmd`) and **JSON**.
 
 All of them share the same C# libraries, so they always read, convert and draw a patch the same way.
@@ -152,10 +154,10 @@ Click a box (web app) to unfold it into its modules, in a lane of its own. The C
 
 - **Voices**: a source (oscillator, complete voice such as Lunar VCO) and everything that processes its audio before a mixer.
 - **Voice processing vs bus processing**: a filter right after an oscillator belongs to that voice; a filter after the mixer is on the bus.
-- **Inserts and send/returns**: an effect patched into a module's insert or aux send and returning into it is drawn stacked under its host, with a side loop.
+- **Inserts and send/returns**: an effect patched into a module's insert or aux send and returning into it is drawn stacked under its host, with a side loop. It must come back into an input that takes audio: back into an oscillator, or into an FM, sync or CV input, it is feedback instead.
 - **Expanders**: an expander docked to its base (Venom mix expanders, MindMeld AuxSpander…) is part of it. Its cables attach to the base, ports prefixed with its name (`Mix Pan › Pan CV 2`).
 - **Wireless links**: Venom's Bay Output and Bay Norm carry what their source Bay Input receives, with no cable between them. Each of their cables is drawn from the module feeding the Bay Input, so the bays themselves drop out of the diagram.
-- **Feedback loops**: cross-modulation and feedback are drawn turning back to their target, tagged `↺ feedback`, and hinted on folded boxes.
+- **Feedback loops**: cross-modulation and feedback are drawn turning back to their target with a dash-dot line (scope links are plain dashes), and hinted on folded boxes. A module patched into itself (an output back into its own FM or feedback input) gets the same loop, kept tight around it: from its lowest output, just under its box, into its lowest input. The **Info** tab lists every loop.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/feedback-dark.png">
@@ -212,18 +214,18 @@ Cardinal runs as a plugin inside a DAW, so it can't talk to real MIDI/audio devi
 | `Audio-2` / `Audio-8` | `Host Audio 2` / `Host Audio 8` |
 | `MIDI-Map` | `Host MIDI Map` |
 
-If you open a Cardinal-saved patch in standalone Rack (or vice versa), those modules are simply missing — the patch loads broken, with dangling cables. `vcvpatch convert` (or the web app's **Convert** tab) rewrites the patch so the right modules, cables, and settings (MIDI channel, learned CC numbers, learned gate notes...) come out the other side.
+If you open a Cardinal-saved patch in standalone Rack (or vice versa), those modules are simply missing — the patch loads broken, with dangling cables. `modpatch convert` (or the web app's **Convert** tab) rewrites the patch so the right modules, cables, and settings (MIDI channel, learned CC numbers, learned gate notes...) come out the other side.
 
 ```bash
 # Cardinal -> Rack: writes "My Patch.rack.vcv" next to the original (the direction is guessed from the patch)
-vcvpatch convert "My Patch.vcv"
+modpatch convert "My Patch.vcv"
 
 # An explicit output name, or an explicit direction (for a patch with no Cardinal- or Rack-only module)
-vcvpatch convert "My Patch.vcv" "My Patch for the studio.vcv"
-vcvpatch convert plain-patch.vcv --to cardinal
+modpatch convert "My Patch.vcv" "My Patch for the studio.vcv"
+modpatch convert plain-patch.vcv --to cardinal
 
 # A whole folder
-for f in ~/Documents/VCVRack/*.vcv; do vcvpatch convert "$f" --to rack; done
+for f in ~/Documents/VCVRack/*.vcv; do modpatch convert "$f" --to rack; done
 ```
 
 Re-running a conversion won't overwrite a previous result: it adds `.x1`, `.x2`, etc. (`--force` overwrites). In the web app, the **Convert** tab does the same and downloads the converted patch, or opens it in the app.
@@ -272,8 +274,8 @@ The **Info** tab's *Cardinal* column says the same for each module: `Yes`, `Yes,
 Requirements: the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-git clone https://github.com/neilbgr/VcvPatchTools.git
-cd VcvPatchTools
+git clone https://github.com/neilbgr/ModularPatchTools.git
+cd ModularPatchTools
 make build
 make test
 ```
@@ -284,7 +286,7 @@ make test
 make web
 ```
 
-Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=modules` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/VcvPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics, the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
+Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` to the URL for the bundled sample, or `?url=` followed by an https link to a patch published elsewhere, and `&tab=info`, `&tab=modules` or `&tab=convert` to open that tab). A GitHub file link works as is, for example [`?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv`](https://neilbgr.github.io/ModularPatchTools/?url=https://github.com/neilbgr/Aluminium/blob/main/docs/Subsequent37-Duo.vcv); other sites have to allow cross-site fetches (CORS), as Patchstorage does. When the link doesn't end with the file name, like Patchstorage's `…/download/` links, add `&name=` to name the patch. The bar at the top holds the patch name, **Open patch** (click it or drop another patch on it), the tabs, a **?** with the basics, the theme button (system, light or dark) and the version, whose menu gives the release date, the build and links to the source, the release notes and the command-line tool. In the **Diagram** tab, one row of tools sits above the diagram:
 
 - unfold/fold boxes, or use **Overview** / **Unfold all**;
 - the numbered layer chips, in their cable color: a hidden layer's chip shows every layer up to it, a shown one's hides just that layer;
@@ -320,19 +322,19 @@ The **Info** tab tells what the patch is (format, Rack or Cardinal, the Rack ver
 
 ### Command line
 
-Ready-made `vcvpatch` executables for Linux, Windows and macOS (x64 and arm64, no .NET needed) are attached to each [release](https://github.com/neilbgr/VcvPatchTools/releases), next to the static web app and the sources. From the sources:
+Ready-made `modpatch` executables for Linux, Windows and macOS (x64 and arm64, no .NET needed) are attached to each [release](https://github.com/neilbgr/ModularPatchTools/releases), next to the static web app and the sources. From the sources:
 
 ```bash
-dotnet run --project src/VcvPatchTools.Cli -- <command>
-# or build a single-file executable: make publish-linux / make publish-win (output in publish/<runtime>/vcvpatch)
+dotnet run --project src/ModularPatchTools.Cli -- <command>
+# or build a single-file executable: make publish-linux / make publish-win (output in publish/<runtime>/modpatch)
 ```
 
 | Command | Does |
 |---|---|
-| `vcvpatch info <patch.vcv>` | Format, Rack or Cardinal origin, then modules by band, voices and their chains, inserts, groups, typed cables, loops, diagnostics |
-| `vcvpatch convert <in.vcv> [out.vcv] [--to cardinal\|rack] [--force] [--no-cable-colors]` | Convert between Rack and Cardinal (see [above](#converting-between-rack-and-cardinal)) |
-| `vcvpatch diagram <patch.vcv> [-o out.html]` | Self-contained interactive HTML page (folded overview) |
-| `vcvpatch diagram <patch.vcv> -f svg\|dot\|mmd\|json [-o file]` | Other formats |
+| `modpatch info <patch.vcv>` | Format, Rack or Cardinal origin, then modules by band, voices and their chains, inserts, groups, typed cables, loops, diagnostics |
+| `modpatch convert <in.vcv> [out.vcv] [--to cardinal\|rack] [--force] [--no-cable-colors]` | Convert between Rack and Cardinal (see [above](#converting-between-rack-and-cardinal)) |
+| `modpatch diagram <patch.vcv> [-o out.html]` | Self-contained interactive HTML page (folded overview) |
+| `modpatch diagram <patch.vcv> -f svg\|dot\|mmd\|json [-o file]` | Other formats |
 | `… --unfold all` or `--unfold voice-1,bus` | Unfold everything, or the given groups (keys listed by `info`) |
 | `… --scopes` | Show scopes and displays as badges |
 | `… --scopes=modules` | Show scopes and displays as boxes in a column on the right |
@@ -340,11 +342,11 @@ dotnet run --project src/VcvPatchTools.Cli -- <command>
 | `… --no-ports` | No port tabs on the box edges |
 | `… --no-links` | No VCV Library links on the module boxes |
 | `… --catalog my-modules.json` | (`info` and `diagram`) Add your own module descriptions, see [Your own modules](#your-own-modules); repeatable |
-| `vcvpatch catalog scan --src <plugin folder or .zip> [--out file]` | Write a module catalog for `--catalog` from a plugin's sources |
-| `vcvpatch catalog build --src <Cardinal/plugins>` | Regenerate the port catalog (see below) |
-| `vcvpatch catalog library --manifests <dir>` | Regenerate the names and tags of the VCV Library modules the port catalog lacks (see below) |
-| `vcvpatch catalog cardinal --upstream <dir> --fork <dir>` | Regenerate the list of modules Cardinal loads (see below) |
-| `vcvpatch --version` | The version and the commit it was built from |
+| `modpatch catalog scan --src <plugin folder or .zip> [--out file]` | Write a module catalog for `--catalog` from a plugin's sources |
+| `modpatch catalog build --src <Cardinal/plugins>` | Regenerate the port catalog (see below) |
+| `modpatch catalog library --manifests <dir>` | Regenerate the names and tags of the VCV Library modules the port catalog lacks (see below) |
+| `modpatch catalog cardinal --upstream <dir> --fork <dir>` | Regenerate the list of modules Cardinal loads (see below) |
+| `modpatch --version` | The version and the commit it was built from |
 
 Windows paths are accepted under WSL (`"C:\Users\me\Documents\patch.vcv"` is read from `/mnt/c/...`). Patch files are only read, never modified: a conversion writes a new file. `inspect` and `render`, the commands' former names, still work.
 
@@ -409,7 +411,7 @@ flowchart LR
 A module that neither Cardinal nor the VCV Library knows, such as your own plugin or one not published yet, shows numbered ports (`in#0`) and a role guessed from its name. You can describe it yourself:
 
 - **Web app, Modules tab**: lists the modules of the patch the catalog can't explain. *Describe* opens an editor for the name, role, tags and port names (as Rack shows them when hovering each port, in port order); a module's sheet in the Diagram tab links there too. *Import plugin sources* reads `plugin.json` and the C++ sources (picked files, or a `.zip` of the repository) in the browser and fills every module of the plugin, the same way the catalog itself is built. Descriptions are kept in the browser and apply to every patch. *Export catalog* saves them as a file to keep or share, *Import catalog* reads one back. *What can I import?* explains both imports and offers a commented template, with an entry for each module of the patch the catalog can't explain.
-- **CLI**: `vcvpatch catalog scan --src MyPlugin` writes `MyPlugin.modules.json`; pass it to `info` or `diagram` with `--catalog`.
+- **CLI**: `modpatch catalog scan --src MyPlugin` writes `MyPlugin.modules.json`; pass it to `info` or `diagram` with `--catalog`.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/modules-dark.png">
@@ -462,26 +464,26 @@ What it can't resolve is listed in `catalog/scan-report.txt` (modules `ports.ove
 ## Project layout
 
 ```
-src/VcvPatchTools.Core/      reading and writing .vcv files, module knowledge; no file I/O (runs in the browser)
+src/ModularPatchTools.Core/      reading and writing .vcv files, module knowledge; no file I/O (runs in the browser)
   Patch/      .vcv archives (zstd + tar, without System.Formats.Tar, unsupported in WebAssembly), patch model
   Catalog/    port catalog, source scanner, roles, functions, VCV Library links
-src/VcvPatchTools.Diagram/   the diagram, no file I/O
+src/ModularPatchTools.Diagram/   the diagram, no file I/O
   Analysis/   signal typing, voices, inserts, expanders, loops, grouping, intents
   Layout/     layered layout (positions and cable paths: the single source of truth for every renderer)
   Render/     SVG, HTML, Graphviz, Mermaid; shared CSS and JavaScript
-src/VcvPatchTools.Bridge/    Rack <-> Cardinal conversion (module mapping, cable colors), no file I/O
-src/VcvPatchTools.Cli/       vcvpatch command-line tool (the only project touching files)
-src/VcvPatchTools.Web/       Blazor WebAssembly app
-tests/VcvPatchTools.Tests/   xUnit tests (Core/, Diagram/, Bridge/, Cli/); tests/fixtures: sample patches; tests/golden: golden files
+src/ModularPatchTools.Bridge/    Rack <-> Cardinal conversion (module mapping, cable colors), no file I/O
+src/ModularPatchTools.Cli/       modpatch command-line tool (the only project touching files)
+src/ModularPatchTools.Web/       Blazor WebAssembly app
+tests/ModularPatchTools.Tests/   xUnit tests (Core/, Diagram/, Bridge/, Cli/); tests/fixtures: sample patches; tests/golden: golden files
 catalog/                     port catalog and roles
 ```
 
 ## Development
 
-- Tests: `make test`. Exporter output is pinned by golden files in `tests/golden`: after an intended change, regenerate them with `UPDATE_GOLDEN=1 dotnet test` and review the diff. The conversion tests (`tests/VcvPatchTools.Tests/Bridge`) are the source of truth for the exact mapping rules.
+- Tests: `make test`. Exporter output is pinned by golden files in `tests/golden`: after an intended change, regenerate them with `UPDATE_GOLDEN=1 dotnet test` and review the diff. The conversion tests (`tests/ModularPatchTools.Tests/Bridge`) are the source of truth for the exact mapping rules.
 - History: the converter was developed as VcvPatchBridge, a separate repository, and merged here with its history.
 - Style: `make format` (`dotnet format`, rules in `.editorconfig`; explicit types, no `var`).
 - Screenshots (`docs/screenshots`, light and dark): rendered pages captured with a headless browser, e.g. `msedge --headless=new --blink-settings=preferredColorScheme=1 --window-size=W,H --screenshot=out.png page.html` (`=0` for dark).
 - Web app online: every push to `main` runs the tests and publishes it to GitHub Pages (`.github/workflows/pages.yml`).
-- Builds and releases: every push to `main` and every pull request builds the executables, the web app and a source archive as workflow artifacts (`.github/workflows/release.yml`). To release, bump `<Version>` in `Directory.Build.props` (`make version` prints it), rename the **Unreleased** section of [`CHANGELOG.md`](CHANGELOG.md) to that version (it becomes the release notes), commit, then push the tag `v<version>` (`git tag v1.0.0 && git push origin v1.0.0`): the workflow checks the tag matches, and publishes everything with checksums as a GitHub release (a pre-release for a version like `1.1.0-rc1`). The web app's **?** menu and `vcvpatch --version` show the version.
+- Builds and releases: every push to `main` and every pull request builds the executables, the web app and a source archive as workflow artifacts (`.github/workflows/release.yml`). To release, bump `<Version>` in `Directory.Build.props` (`make version` prints it), rename the **Unreleased** section of [`CHANGELOG.md`](CHANGELOG.md) to that version (it becomes the release notes), commit, then push the tag `v<version>` (`git tag v1.0.0 && git push origin v1.0.0`): the workflow checks the tag matches, and publishes everything with checksums as a GitHub release (a pre-release for a version like `1.1.0-rc1`). The web app's **?** menu and `modpatch --version` show the version.
 - Contributions welcome, especially entries for `catalog/roles.json` and `catalog/ports.overrides.json` for the modules you use.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copies the files "vcvpatch catalog cardinal" reads, as they are on DISTRHO/Cardinal's main branch,
+# Copies the files "modpatch catalog cardinal" reads, as they are on DISTRHO/Cardinal's main branch,
 # from a local Cardinal clone with an "upstream" remote: plugins/plugins.cpp, src/override/plugin.cpp
 # and every plugins/<dir>/plugin.json (submodule manifests at the commit upstream pins).
 # Usage: export-cardinal-upstream.sh <Cardinal clone> <output dir> [ref, default upstream/main]

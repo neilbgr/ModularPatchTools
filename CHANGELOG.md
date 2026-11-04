@@ -5,6 +5,28 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+### Added
+- A module patched into itself (an output back into its own FM or feedback input) shows its cable, a tight loop
+  from its lowest output just under its box into its lowest input, crossing nothing; such modules count as feedback
+  loops (folded boxes hint at them, `inspect` lists them).
+- The Info tab lists the patch's feedback loops.
+
+### Changed
+- Feedback cables are drawn dash-dot (scope links keep their plain dashes) instead of carrying a "↺ feedback" tag; the
+  standalone SVG legend explains it.
+- Renamed from VCV Patch Tools to **Modular Patch Tools** (VCV is a trademark of VCV): the repository is now
+  github.com/neilbgr/ModularPatchTools, the web app neilbgr.github.io/ModularPatchTools (the old address redirects,
+  and what the browser remembered is kept), and the command line `modpatch` instead of `vcvpatch`.
+
+### Fixed
+- A module that hears an oscillator and goes back into its FM, sync or CV input is a feedback loop, drawn as such,
+  instead of an insert tucked under the oscillator. Inserts still need to return into an input that takes audio.
+- In a loop, the cable going back into a modulation input (a mixer's level CV, an oscillator's FM…) is the one drawn
+  as feedback, so the signal path keeps reading left to right.
+- The audio interface the sound leaves through stays in the last column, even when a loop could pull it back.
+- An insert that also feeds another module (a reverb in a filter's insert feeding a detector) no longer has its
+  send arrow landing on its own output: the send and the return take the top slot of their side.
+
 ## [1.3.1] - 2026-11-04
 
 ### Fixed
@@ -95,10 +117,10 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/VcvPatchTools/compare/v1.3.1...HEAD
-[1.3.1]: https://github.com/neilbgr/VcvPatchTools/compare/v1.3.0...v1.3.1
-[1.3.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.1...v1.2.0
-[1.1.1]: https://github.com/neilbgr/VcvPatchTools/compare/v1.1.0...v1.1.1
-[1.1.0]: https://github.com/neilbgr/VcvPatchTools/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/neilbgr/VcvPatchTools/releases/tag/v1.0.0
+[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/neilbgr/ModularPatchTools/releases/tag/v1.0.0

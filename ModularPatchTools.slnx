@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ModularPatchTools.Bridge/ModularPatchTools.Bridge.csproj" />
+    <Project Path="src/ModularPatchTools.Cli/ModularPatchTools.Cli.csproj" />
+    <Project Path="src/ModularPatchTools.Core/ModularPatchTools.Core.csproj" />
+    <Project Path="src/ModularPatchTools.Diagram/ModularPatchTools.Diagram.csproj" />
+    <Project Path="src/ModularPatchTools.Web/ModularPatchTools.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ModularPatchTools.Tests/ModularPatchTools.Tests.csproj" />
+  </Folder>
+</Solution>

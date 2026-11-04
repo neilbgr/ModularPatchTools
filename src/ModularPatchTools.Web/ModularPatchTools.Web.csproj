@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.12" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.12" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModularPatchTools.Bridge\ModularPatchTools.Bridge.csproj" />
+    <ProjectReference Include="..\ModularPatchTools.Diagram\ModularPatchTools.Diagram.csproj" />
+  </ItemGroup>
+
+  <!-- One pan/zoom, one library preview and one hover script for both the static export and the app: copied from Diagram before each build. -->
+  <Target Name="CopySharedScripts" BeforeTargets="BeforeBuild">
+    <Copy SourceFiles="..\ModularPatchTools.Diagram\Render\panzoom.js;..\ModularPatchTools.Diagram\Render\library.js;..\ModularPatchTools.Diagram\Render\highlight.js" DestinationFolder="wwwroot\js" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

@@ -1,0 +1,745 @@
+﻿using ModularPatchTools.Core.Catalog;
+using ModularPatchTools.Core.Patch;
+using ModularPatchTools.Diagram;
+using ModularPatchTools.Diagram.Analysis;
+using ModularPatchTools.Diagram.Layout;
+using ModularPatchTools.Diagram.Render;
+using System.Text;
+using System.Text.Json.Nodes;
+
+namespace ModularPatchTools.Tests;
+
+public class AnalyzerTests
+{
+    private static readonly PatchAnalysis analysis = Fixtures.AmbientJam;
+
+    private static List<string> Chain(Voice voice) => voice.ModuleIds.Select(id => analysis.Module(id).Title).ToList();
+
+    [Fact]
+    public void DetectsTheTwoVoicesInSignalOrder()
+    {
+        Assert.Equal(2, analysis.Voices.Count);
+        Voice keyboard = analysis.Voices.Single(v => v.PitchOrigin == "Host MIDI");
+        Voice sequenced = analysis.Voices.Single(v => v.PitchOrigin == "ADDR-SEQ");
+        Assert.Equal(new[] { "PULSE", "VCF #1", "Waveshaper", "EQ" }, Chain(keyboard));
+        Assert.Equal(new[] { "LVCO", "VCF #2" }, Chain(sequenced));
+    }
+
+    [Theory]
+    [InlineData("Host MIDI", Band.External)]
+    [InlineData("Host MIDI Gate", Band.External)]
+    [InlineData("Clkd", Band.Time)]
+    [InlineData("Quantizer", Band.Pitch)]
+    [InlineData("LLFO", Band.Modulation)]
+    [InlineData("MIX4", Band.Bus)]
+    [InlineData("Plateau", Band.Bus)]
+    [InlineData("Audio 2", Band.Bus)]
+    public void PutsModulesInTheirBand(string title, Band band) =>
+        Assert.Equal(band, analysis.Modules.Single(m => m.Title == title).Band);
+
+    [Fact]
+    public void ModulesWithoutCablesAreLeftOut() => Assert.DoesNotContain(analysis.Modules, m => m.Title == "ASX");
+
+    [Fact]
+    public void TypesEveryCableFromNeilsPalette()
+    {
+        Dictionary<SignalType, int> counts = analysis.Cables.GroupBy(c => c.Signal).ToDictionary(g => g.Key, g => g.Count());
+
+        Assert.Equal(12, counts[SignalType.Audio]);
+        Assert.Equal(5, counts[SignalType.Pitch]);
+        Assert.Equal(11, counts[SignalType.Cv]);
+        Assert.Equal(10, counts[SignalType.Gate]);
+        Assert.Empty(analysis.Diagnostics);
+    }
+
+    [Fact]
+    public void NamesSurgeModulationInputsByTheKnobsTheyMove()
+    {
+        AnalyzedCable cc4 = analysis.Cables.Single(c => analysis.Module(c.Cable.From.ModuleId).Title == "Host MIDI CC" && c.FromPort == "Cell 4 · CC 60");
+
+        Assert.Equal("Mod 3 → Frequency +40%, Pre-Filter Gain +7%", cc4.ToPort);
+        Assert.Equal(new[] { "Frequency", "Pre-Filter Gain" }, cc4.Routes.Select(r => r.Target));
+        Assert.Equal("hand control of frequency & pre-filter gain", cc4.SuggestedIntent);
+    }
+
+    [Fact]
+    public void FlagsAModulationInputWithoutTarget()
+    {
+        string json = """
+            {
+              "modules": [
+                { "id": 1, "plugin": "Bogaudio", "model": "Bogaudio-LLFO", "pos": [0, 0] },
+                { "id": 2, "plugin": "SurgeXTRack", "model": "SurgeXTVCF", "pos": [10, 0], "params": [ { "id": 5, "value": 0.5 } ] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 3, "color": "#52ff7d" }
+              ]
+            }
+            """;
+
+        PatchAnalysis lonely = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Contains(lonely.Diagnostics, d => d.Contains("does nothing", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TellsVoiceProcessingFromBusProcessingAndInserts()
+    {
+        PatchAnalysis meditations = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("MeditationsOnDeath.vcv")));
+        AnalyzedModule Find(string title) => meditations.Modules.Single(m => m.Title == title);
+
+        // Reverb right after a voice's filter, before any mixer: part of that voice.
+        Assert.Equal(Band.Voice, Find("Plateau #1").Band);
+        Assert.Equal(Find("LunarPapaSrapa #1").Voice, Find("Plateau #1").Voice);
+        // Filter fed by a mixer: bus processing, with the EQ patched into its insert send/return.
+        Assert.Equal(Band.Bus, Find("LunarFilter").Band);
+        Assert.Null(Find("LunarFilter").InsertOf);
+        Assert.Equal(Find("LunarFilter").Module.Id, Find("EQ").InsertOf);
+        // Reverb on an aux send/return of the mixer (its docked AuxSpander is part of it).
+        Assert.Equal(Find("MixMasterJr").Module.Id, Find("Plateau #2").InsertOf);
+        Assert.Equal(Band.Bus, Find("Plateau #2").Band);
+    }
+
+    [Fact]
+    public void FindsFeedbackLoopsButNotEffectLoops()
+    {
+        PatchAnalysis feedback = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("FeedbackTest.vcv")));
+        List<string> Titles(PatchAnalysis patch, IReadOnlyList<long> loop) => loop.Select(id => patch.Module(id).Title).Order().ToList();
+
+        Assert.Equal(2, feedback.Loops.Count);
+        Assert.Contains(feedback.Loops, l => Titles(feedback, l).SequenceEqual(new[] { "FM-OP #1", "FM-OP #2" }));
+        Assert.Contains(feedback.Loops, l => Titles(feedback, l).SequenceEqual(new[] { "VCO #1", "VCO #2" }));
+        // An EQ in a filter's insert, a reverb on a mixer's aux send/return: effect loops, not feedback.
+        Assert.Empty(PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("MeditationsOnDeathRack.vcv"))).Loops);
+    }
+
+    /// <summary>The AmbientJam fixture with extra cables (output module, output, input module, input), as Dave Benham's feedback patching does.</summary>
+    private static PatchArchive AmbientJamWith(params (long From, int Output, long To, int Input)[] cables)
+    {
+        PatchArchive archive = PatchArchive.Read(File.ReadAllBytes(Fixtures.Path("AmbientJam.vcv")));
+        JsonArray list = archive.Root["cables"]!.AsArray();
+        long id = 900;
+        foreach ((long from, int output, long to, int input) in cables)
+        {
+            list.Add(new JsonObject { ["id"] = id++, ["outputModuleId"] = from, ["outputId"] = output, ["inputModuleId"] = to, ["inputId"] = input, ["color"] = "#ff5252" });
+        }
+        return archive;
+    }
+
+    private const long lvco = 7521774204900965;
+    private const long vcf2 = 7411897278716254;
+    private const long delay = 2112618335105631;
+
+    [Fact]
+    public void ModulePatchedIntoItselfIsALoopOfOne()
+    {
+        PatchAnalysis patch = PatchDiagram.Analyze(AmbientJamWith((lvco, 0, lvco, 1), (delay, 0, delay, 1)));
+
+        Assert.Contains(patch.Loops, l => l.SequenceEqual(new[] { lvco }));
+        Assert.Contains(patch.Loops, l => l.SequenceEqual(new[] { delay }));
+        Assert.Equal("LVCO ↺ itself ('Signal' → 'Frequency modulation')", patch.DescribeLoop(new[] { lvco }));
+
+        // Drawn as a cable like any other feedback: out on the right, back under the box, into its own input.
+        DiagramLayout layout = PatchDiagram.Layout(patch, "AmbientJam", PatchDiagram.GroupKeys(patch));
+        DiagramEdge loop = layout.Edges.Single(e => e.From == "m" + lvco && e.To == "m" + lvco);
+        Assert.True(loop.IsFeedback);
+        Assert.Equal("Frequency modulation", loop.ToPort);
+        Assert.Contains(layout.Nodes.Single(n => n.ModuleId == lvco).Tabs, t => !t.Output && t.Tooltip == "Frequency modulation");
+        // Folded, the loop is inside its group's box: only the hint says so.
+        DiagramLayout folded = PatchDiagram.Layout(patch, "AmbientJam");
+        Assert.DoesNotContain(folded.Edges, e => e.From == e.To);
+    }
+
+    [Fact]
+    public void FilterReturningIntoAnOscillatorIsFeedbackNotAnInsert()
+    {
+        // VCF #2 hears LVCO and goes back into its sync input: a loop, which the insert rule used to swallow.
+        PatchAnalysis patch = PatchDiagram.Analyze(AmbientJamWith((vcf2, 0, lvco, 2)));
+
+        Assert.Null(patch.Module(vcf2).InsertOf);
+        Assert.Contains(patch.Loops, l => l.Order().SequenceEqual(new[] { vcf2, lvco }.Order()));
+        Assert.Equal("LVCO ⇄ VCF #2", patch.DescribeLoop(patch.Loops.Single(l => l.Contains(vcf2))));
+    }
+
+    [Fact]
+    public void ReturnIntoALevelCvIsTheFeedbackAndTheOutputStaysLast()
+    {
+        const long plateau = 3951164105101658;
+        const long mix4 = 1105006806367356;
+        const long audio = 1;
+        // Plateau, after MIX4, goes back into MIX4's channel 2 level CV: that return is the feedback, not MIX4 → Plateau.
+        PatchAnalysis patch = PatchDiagram.Analyze(AmbientJamWith((plateau, 0, mix4, 3)));
+        DiagramLayout layout = PatchDiagram.Layout(patch, "AmbientJam", PatchDiagram.GroupKeys(patch));
+        DiagramEdge Edge(long from, long to) => layout.Edges.First(e => e.From == "m" + from && e.To == "m" + to);
+
+        Assert.True(Edge(plateau, mix4).IsFeedback);
+        Assert.False(Edge(mix4, plateau).IsFeedback);
+        // The audio interface the sound leaves through is in the last column.
+        Assert.Equal(layout.Nodes.Max(n => n.X), layout.Nodes.Single(n => n.ModuleId == audio).X);
+    }
+
+    [Fact]
+    public void InsertSendDoesNotLandOnTheInsertsOwnOutput()
+    {
+        const long filter = 8768569517301636;
+        const long eq = 2107957889495154;
+        const long vcf = 7191008297403704;
+        // The EQ in LunarFilter's insert also feeds another module (as Plateau feeds a detector in a sidechain).
+        PatchArchive archive = PatchArchive.Read(File.ReadAllBytes(Fixtures.Path("MeditationsOnDeath.vcv")));
+        archive.Root["cables"]!.AsArray().Add(new JsonObject { ["id"] = 999, ["outputModuleId"] = eq, ["outputId"] = 0, ["inputModuleId"] = vcf, ["inputId"] = 5, ["color"] = "#52ff7d" });
+        PatchAnalysis patch = PatchDiagram.Analyze(archive);
+        Assert.Equal(filter, patch.Module(eq).InsertOf);
+        DiagramLayout layout = PatchDiagram.Layout(patch, "MeditationsOnDeath", PatchDiagram.GroupKeys(patch));
+
+        // The send comes into the EQ's right side, where its own outputs leave: never at the same height.
+        DiagramEdge send = layout.Edges.Single(e => e.From == "m" + filter && e.To == "m" + eq);
+        string[] path = send.Path.Split(' ');
+        double sendY = double.Parse(path[^3], System.Globalization.CultureInfo.InvariantCulture);
+        DiagramNode insert = layout.Nodes.Single(n => n.ModuleId == eq);
+        Assert.Contains(insert.Tabs, t => t.Output);
+        Assert.All(insert.Tabs.Where(t => t.Output), t => Assert.True(Math.Abs(t.Y - sendY) >= 8, $"output tab at {t.Y}, send at {sendY}"));
+    }
+
+    [Theory]
+    [InlineData("FM", true)]
+    [InlineData("Sync", true)]
+    [InlineData("Cutoff CV", true)]
+    [InlineData("Return L", false)]
+    [InlineData("In", false)]
+    [InlineData("Left", false)]
+    public void ModulationInputsAreToldFromSignalInputs(string port, bool modulation) => Assert.Equal(modulation, SignalClassifier.IsModulationInput(port));
+
+    [Fact]
+    public void DockedExpandersAreFoldedIntoTheirBase()
+    {
+        PatchAnalysis drone = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("NotBoringDrone3.vcv")));
+
+        Assert.DoesNotContain(drone.Modules, m => m.Module.Model is "MixPan" or "MixMute" or "MixFade");
+        AnalyzedModule mixer = drone.Modules.Single(m => m.Title == "VCA Mix 4 Stereo");
+        Assert.Contains("Mix Pan", mixer.Expanders);
+        Assert.Contains(drone.Cables, c => c.Cable.To.ModuleId == mixer.Module.Id && c.ToPort == "Mix Pan › Pan CV 2");
+    }
+
+    [Fact]
+    public void AnExpanderNeedsABaseOfItsOwnFamilyDockedToIt()
+    {
+        PatchModule mixer = new PatchModule(1, "Venom", "Mix4", 0, 0) { RightModuleId = 2 };
+        PatchModule pan = new PatchModule(2, "Venom", "MixPan", 5, 0) { LeftModuleId = 1, RightModuleId = 3 };
+        PatchModule mute = new PatchModule(3, "Venom", "MixMute", 8, 0) { LeftModuleId = 2, RightModuleId = 4 };
+        PatchModule stranger = new PatchModule(4, "Bogaudio", "Bogaudio-LLFO", 11, 0) { LeftModuleId = 3 };
+        PatchModule alone = new PatchModule(5, "Venom", "MixSolo", 30, 0);
+        PatchModule wrongFamily = new PatchModule(6, "Venom", "MixSend", 40, 0) { LeftModuleId = 4 };
+
+        Dictionary<long, long> baseOf = ExpanderChains.BaseOf(new[] { mixer, pan, mute, stranger, alone, wrongFamily }, PortCatalog.LoadEmbedded());
+
+        Assert.Equal(new Dictionary<long, long> { [2] = 1, [3] = 1 }, baseOf);
+    }
+
+    [Theory]
+    [InlineData(null, Role.Performance, Band.External)]
+    [InlineData("Core/MIDIToCVInterface", Role.Performance, Band.External)]
+    [InlineData("AmbientModules/LunarSequencer", Role.Time, Band.Time)]
+    public void PadsArePerformanceUnlessAnotherModulePlaysThem(string? driver, Role role, Band band)
+    {
+        List<PatchModule> modules = new List<PatchModule>
+        {
+            new PatchModule(1, "AmbientModules", "LunarPads", 0, 0),
+            new PatchModule(2, "Fundamental", "ADSR", 10, 0),
+        };
+        List<PatchCable> cables = new List<PatchCable> { new PatchCable(1, new PortRef(1, 0), new PortRef(2, 4), "#52beff") };
+        if (driver is not null)
+        {
+            string[] key = driver.Split('/');
+            modules.Add(new PatchModule(3, key[0], key[1], 20, 0));
+            cables.Add(new PatchCable(2, new PortRef(3, 1), new PortRef(1, 0), "#52beff"));
+        }
+
+        PatchAnalysis pads = PatchAnalyzer.CreateDefault().Analyze(new PatchDocument("2.6.6", modules, cables));
+
+        Assert.Equal(role, pads.Module(1).Role);
+        Assert.Equal(band, pads.Module(1).Band);
+    }
+
+    [Fact]
+    public void APianoKeyboardIsPlayedLiveOrOnlyShowsTheNotes()
+    {
+        List<PatchModule> modules = new List<PatchModule>
+        {
+            new PatchModule(1, "Core", "MIDIToCVInterface", 0, 0),
+            new PatchModule(2, "unless_modules", "pianoid", 10, 0),
+            new PatchModule(3, "Fundamental", "VCO", 20, 0),
+        };
+        PatchCable midiIn = new PatchCable(1, new PortRef(1, 0), new PortRef(2, 0), "#ffd452");
+        PatchCable played = new PatchCable(2, new PortRef(2, 0), new PortRef(3, 0), "#ffd452");
+        PatchAnalyzer analyzer = PatchAnalyzer.CreateDefault();
+
+        AnalyzedModule player = analyzer.Analyze(new PatchDocument("2.6.6", modules, new[] { midiIn, played })).Module(2);
+        AnalyzedModule display = analyzer.Analyze(new PatchDocument("2.6.6", modules, new[] { midiIn })).Module(2);
+
+        Assert.Equal((Role.Performance, Band.External), (player.Role, player.Band));
+        Assert.Equal((Role.Monitor, Band.Monitor), (display.Role, display.Band));
+    }
+
+    [Fact]
+    public void MidiGateAndCcPortsAreNamedByTheirLearnedNoteAndController()
+    {
+        List<string> ports = analysis.Cables.Select(c => c.FromPort).ToList();
+
+        Assert.Contains("Gate 13 · A2", ports);
+        Assert.Contains("Gate 7 · G#2", ports);
+        Assert.Contains("Cell 1 · CC 61", ports);
+        Assert.Contains("Cell 4 · CC 60", ports);
+    }
+
+    [Theory]
+    [InlineData("Core", "MIDITriggerToCVInterface", 0, "Gate 1", "Gate 1 · C4")]
+    [InlineData("Core", "MIDICCToCVInterface", 1, "Cell 2", "Cell 2 · CC 74 (cutoff)")]
+    [InlineData("Core", "CV-Gate", 0, "Cell 1", "Cell 1 · C4")]
+    [InlineData("Cardinal", "HostMIDICC", 2, "Cell 3", "Cell 3")]
+    [InlineData("Cardinal", "HostMIDICC", 16, "Channel pressure", "Channel pressure")]
+    [InlineData("Bogaudio", "Bogaudio-ADSR", 0, "Gate 1", "Gate 1")]
+    public void LearnedMidiNumbersNameTheCells(string plugin, string model, int index, string port, string expected)
+    {
+        PatchModule module = new PatchModule(1, plugin, model, 0, 0)
+        {
+            LearnedNotes = model.Contains("CC", StringComparison.Ordinal) ? Array.Empty<int>() : new[] { 60 },
+            LearnedCcs = model.Contains("CC", StringComparison.Ordinal) ? new[] { 1, 74, -1 } : Array.Empty<int>(),
+        };
+
+        Assert.Equal(expected, MidiLearn.Name(module, index, port));
+    }
+
+    [Theory]
+    [InlineData("Faders2", 1, true, "Fader 2", "Cutoff")]
+    [InlineData("Faders2", 0, false, "Fader 1", "Fader 1")]
+    [InlineData("Fader", 0, false, "Fader", "Fader")]
+    [InlineData("Buttons", 1, true, "Button 2", "Cutoff")]
+    [InlineData("PadX", 0, true, "Lane (poly)", "Cutoff (poly)")]
+    [InlineData("PadX", 2, false, "Lane 3", "Cutoff 3")]
+    public void TypedLabelsNameThePortsAsTheModuleDoes(string model, int index, bool input, string port, string expected)
+    {
+        PatchModule module = new PatchModule(1, "Aluminium", model, 0, 0)
+        {
+            Labels = model == "PadX" ? new[] { "Cutoff" } : new[] { "", "Cutoff" },
+        };
+
+        Assert.Equal(expected, PortLabels.Name(module, index, port, input));
+    }
+
+    [Fact]
+    public void ALabelOnAnotherPluginsModuleIsNotAPortName()
+    {
+        PatchModule module = new PatchModule(1, "Fundamental", "VCO", 0, 0) { Labels = new[] { "Cutoff" } };
+
+        Assert.Equal("Sin", PortLabels.Name(module, 0, "Sin", input: false));
+    }
+
+    [Fact]
+    public void CablesFromAFaderAreNamedByItsLabel()
+    {
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Aluminium", "model": "Faders2", "pos": [0, 0], "data": { "faders": [{ "label": "" }, { "label": "Cutoff" }] } },
+                { "id": 2, "plugin": "Fundamental", "model": "VCF", "pos": [10, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 1 },
+                { "id": 2, "outputModuleId": 1, "outputId": 1, "inputModuleId": 2, "inputId": 0 }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(new[] { "Fader 1", "Cutoff" }, patch.Cables.OrderBy(c => c.Cable.Id).Select(c => c.FromPort));
+    }
+
+    [Fact]
+    public void AnIntentKeepsTheCaseOfATypedLabel()
+    {
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Cardinal", "model": "HostMIDICC", "pos": [0, 0], "data": { "ccs": [16, 17] } },
+                { "id": 2, "plugin": "Aluminium", "model": "Faders2", "pos": [10, 0], "data": { "faders": [{ "label": "ATTCK" }, { "label": "" }] } }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0 },
+                { "id": 2, "outputModuleId": 1, "outputId": 1, "inputModuleId": 2, "inputId": 1 }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(new[] { "hand control of ATTCK", "hand control of fader 2" }, patch.Cables.OrderBy(c => c.Cable.Id).Select(c => c.SuggestedIntent));
+    }
+
+    [Fact]
+    public void ALearnedControllerIsTypedByWhereItGoesNotByItsUsualMeaning()
+    {
+        // CC 11 is "expression" in General MIDI, CC 12 has no usual meaning: both clock a switch, both are gates.
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Core", "model": "MIDICCToCVInterface", "pos": [0, 0], "data": { "ccs": [12, 11] } },
+                { "id": 2, "plugin": "Fundamental", "model": "SequentialSwitch2", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "SequentialSwitch2", "pos": [20, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#3695ef" },
+                { "id": 2, "outputModuleId": 1, "outputId": 1, "inputModuleId": 3, "inputId": 0, "color": "#3695ef" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.All(patch.Cables, c => Assert.Equal(SignalType.Gate, c.Signal));
+        Assert.Contains(patch.Cables, c => c.FromPort == "Cell 2 · CC 11 (expression)");
+        // Its "Clock" input keeps its panel name, but each edge moves on to the next channel, it doesn't set a tempo.
+        Assert.All(patch.Cables, c => Assert.Equal(("Clock", "steps to the next channel"), (c.ToPort, c.SuggestedIntent)));
+    }
+
+    [Fact]
+    public void SurgeOscillatorPortsAndModulationAreNamedAndTyped()
+    {
+        // Aluminium's Subsequent37-Duo demo: Surge XT Classic VCOs, registered as VCOWidget<ot_classic>::M.
+        PatchAnalysis duo = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("Subsequent37-Duo.vcv")));
+        AnalyzedCable Into(string title, string port) => duo.Cables.Single(c => duo.Module(c.Cable.To.ModuleId).Title == title && c.ToPort.StartsWith(port, StringComparison.Ordinal));
+
+        Assert.Equal(SignalType.Pitch, Into("Classic VCO #2", "V/Oct").Signal);
+        // A vibrato into a modulation input is CV, even though the knob it moves is the pitch.
+        AnalyzedCable vibrato = Into("Classic VCO #1", "Mod 1 → Pitch");
+        Assert.Equal(SignalType.Cv, vibrato.Signal);
+        Assert.DoesNotContain(duo.Cables, c => c.ToPort.StartsWith("in#", StringComparison.Ordinal) || c.FromPort.StartsWith("out#", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("VCF #1", ModuleFunction.Filter)]
+    [InlineData("ADSR EG #2", ModuleFunction.Envelope)]
+    [InlineData("LLFO", ModuleFunction.Lfo)]
+    [InlineData("Random", ModuleFunction.Random)]
+    [InlineData("Clkd", ModuleFunction.Clock)]
+    [InlineData("ADDR-SEQ", ModuleFunction.Sequencer)]
+    [InlineData("Quantizer", ModuleFunction.Quantizer)]
+    [InlineData("Plateau", ModuleFunction.Reverb)]
+    [InlineData("Delay Plus Stereo Fx", ModuleFunction.Delay)]
+    [InlineData("MIX4", ModuleFunction.Mixer)]
+    [InlineData("PULSE", ModuleFunction.Oscillator)]
+    [InlineData("Host MIDI", ModuleFunction.Midi)]
+    public void ModulesGetTheFunctionATeacherWouldName(string title, ModuleFunction function)
+    {
+        Assert.Equal(function, analysis.Modules.Single(m => m.Title == title).Function);
+    }
+
+    [Fact]
+    public void FunctionNamesTitleTheBoxesAndKeepTheModuleUnder()
+    {
+        DiagramLayout byFunction = PatchDiagram.Layout(analysis, "Ambient Jam", PatchDiagram.GroupKeys(analysis), functionNames: true);
+        DiagramNode filter = byFunction.Nodes.Single(n => n.ModuleId is long id && analysis.Module(id).Title == "VCF #1");
+        DiagramNode midi = byFunction.Nodes.Single(n => n.ModuleId is long id && analysis.Module(id).Title == "Host MIDI");
+
+        Assert.Equal(("FILTER #1", "VCF #1 · SurgeXTRack"), (filter.Title, filter.Subtitle));
+        Assert.Equal("Host MIDI", midi.Title);
+        Assert.Contains(byFunction.Edges, e => e.ToTitle == "VCF #1");
+    }
+
+    [Fact]
+    public void LunarVoicesAreSourcesEvenWithAMiscoloredCable()
+    {
+        PatchAnalysis meditations = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("MeditationsOnDeath.vcv")));
+
+        Assert.Equal(8, meditations.Voices.Count);
+        Assert.Equal(4, meditations.Voices.Count(v => v.Sources.StartsWith("Lunar50Drone", StringComparison.Ordinal)));
+        Assert.Contains(meditations.Diagnostics, d => d.Contains("treated as audio", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ModulatorsServingOnlyOneVoiceBelongToIt()
+    {
+        IReadOnlyList<PatchGroup> groups = PatchGrouping.Build(analysis);
+        PatchGroup Owner(string title) => groups.Single(g => g.Members.Contains(analysis.Modules.Single(m => m.Title == title).Module.Id));
+
+        Assert.Equal(Owner("PULSE"), Owner("LLFO"));
+        Assert.Equal(Owner("PULSE"), Owner("SLEW"));
+        Assert.Equal(Owner("LVCO"), Owner("Quantizer"));
+        // Random pans MIX4's channel 2, which only carries the LVCO voice.
+        Assert.Equal(Owner("LVCO"), Owner("Random"));
+        Assert.Equal("time", Owner("ADDR-SEQ").Key);
+        Assert.Equal("external", Owner("Host MIDI").Key);
+    }
+
+    [Fact]
+    public void IdenticalOneModuleVoicesFoldTogether()
+    {
+        PatchAnalysis meditations = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("MeditationsOnDeathRack.vcv")));
+
+        PatchGroup drones = Assert.Single(PatchGrouping.Build(meditations), g => g.Title.Contains("Lunar50Drone ×4", StringComparison.Ordinal));
+        Assert.Equal(4, drones.Count);
+        Assert.Empty(meditations.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData(true, Band.External)]
+    [InlineData(false, Band.Pitch)]
+    public void KeyboardZonesRelayTheOutsideOnlyWhenFedByHostMidi(bool fromHostMidi, Band expected)
+    {
+        string source = fromHostMidi
+            ? """{ "id": 1, "plugin": "Cardinal", "model": "HostMIDI", "pos": [0, 0] }"""
+            : """{ "id": 1, "plugin": "Bogaudio", "model": "Bogaudio-AddrSeq", "pos": [0, 0] }""";
+        string json = $$"""
+            {
+              "modules": [
+                {{source}},
+                { "id": 2, "plugin": "Aluminium", "model": "Zones", "pos": [10, 0] },
+                { "id": 3, "plugin": "Bogaudio", "model": "Bogaudio-LVCO", "pos": [20, 0] },
+                { "id": 4, "plugin": "JW-Modules", "model": "FullScope", "pos": [30, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#ffd452" },
+                { "id": 2, "outputModuleId": 2, "outputId": 0, "inputModuleId": 3, "inputId": 0, "color": "#ffd452" },
+                { "id": 3, "outputModuleId": 3, "outputId": 0, "inputModuleId": 4, "inputId": 0, "color": "#ff5252" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(expected, patch.Modules.Single(m => m.Module.Model == "Zones").Band);
+        Assert.Equal(Band.Monitor, patch.Modules.Single(m => m.Module.Model == "FullScope").Band);
+        Assert.DoesNotContain(PatchDiagram.Layout(patch, "t").Nodes, n => n.Group == "monitor" || n.Watchers.Count > 0);
+        DiagramLayout withScopes = PatchDiagram.Layout(patch, "t", PatchDiagram.GroupKeys(patch), monitors: MonitorView.Badge);
+        Assert.DoesNotContain(withScopes.Nodes, n => n.Group == "monitor");
+        Assert.Equal("Full Scope 'X' ← LVCO 'Signal'", Assert.Single(withScopes.Nodes.Single(n => n.Title == "LVCO").Watchers));
+    }
+
+    [Fact]
+    public void ScopesAsModulesGoInAColumnOnTheRightNextToWhatTheyWatch()
+    {
+        string json = """
+            {
+              "modules": [
+                { "id": 1, "plugin": "Fundamental", "model": "LFO", "pos": [0, 0] },
+                { "id": 2, "plugin": "Fundamental", "model": "VCO", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "VCF", "pos": [20, 0] },
+                { "id": 4, "plugin": "Fundamental", "model": "Scope", "pos": [30, 0] },
+                { "id": 5, "plugin": "JW-Modules", "model": "FullScope", "pos": [40, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#52ff7d" },
+                { "id": 2, "outputModuleId": 2, "outputId": 0, "inputModuleId": 3, "inputId": 3, "color": "#ff5252" },
+                { "id": 3, "outputModuleId": 1, "outputId": 0, "inputModuleId": 4, "inputId": 0, "color": "#52ff7d" },
+                { "id": 4, "outputModuleId": 3, "outputId": 0, "inputModuleId": 5, "inputId": 0, "color": "#ff5252" }
+              ]
+            }
+            """;
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        DiagramLayout layout = PatchDiagram.Layout(patch, "t", PatchDiagram.GroupKeys(patch), monitors: MonitorView.Modules);
+
+        List<DiagramNode> scopes = layout.Nodes.Where(n => n.Band == Band.Monitor).OrderBy(n => n.Y).ToList();
+        Assert.Equal(new[] { "Scope", "Full Scope" }, scopes.Select(n => n.Title));
+        double flowRight = layout.Nodes.Where(n => n.Band != Band.Monitor).Max(n => n.X + n.Width);
+        Assert.All(scopes, n => Assert.True(n.X > flowRight));
+        Assert.True(scopes[1].Y >= scopes[0].Y + scopes[0].Height, "scopes don't overlap");
+        DiagramBand column = Assert.Single(layout.Bands, b => b.IsVertical);
+        Assert.True(column.X > flowRight && column.X + column.Width <= layout.Width);
+        Assert.All(layout.Bands.Where(b => !b.IsVertical), b => Assert.True(layout.Extent(b).X + layout.Extent(b).Width < column.X));
+        Assert.Equal(2, layout.Edges.Count(e => e.IsMonitor));
+        Assert.Contains("monitor", SvgRenderer.EdgeClass(layout.Edges.First(e => e.IsMonitor)));
+        Assert.DoesNotContain(layout.Nodes, n => n.Watchers.Count > 0);
+        Assert.Equal("VCF", layout.Node(layout.Edges.Single(e => e.To == scopes[1].Key).From).Title);
+
+        // The overview folds the two into one box, still in the column.
+        DiagramLayout overview = PatchDiagram.Layout(patch, "t", monitors: MonitorView.Modules);
+        DiagramNode folded = Assert.Single(overview.Nodes, n => n.Band == Band.Monitor);
+        Assert.True(folded.IsFolded);
+        Assert.Equal(folded, Assert.Single(overview.Members(overview.Bands.Single(b => b.IsVertical))));
+    }
+
+    [Fact]
+    public void ReportsStackedCablesOnOneInput()
+    {
+        string json = """
+            {
+              "modules": [
+                { "id": 1, "plugin": "Fundamental", "model": "LFO", "pos": [0, 0] },
+                { "id": 2, "plugin": "Fundamental", "model": "LFO", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "VCF", "pos": [20, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 3, "inputId": 0 },
+                { "id": 2, "outputModuleId": 2, "outputId": 0, "inputModuleId": 3, "inputId": 0 }
+              ]
+            }
+            """;
+
+        PatchAnalysis stacked = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Contains(stacked.Diagnostics, d => d.Contains("2 stacked cables", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void TopologicalOrderSurvivesFeedbackLoops()
+    {
+        List<long> order = GraphOrder.Topological(new long[] { 1, 2, 3 }, new[] { (1L, 2L), (2L, 3L), (3L, 2L) });
+
+        Assert.Equal(new long[] { 1, 2, 3 }, order);
+    }
+
+    [Fact]
+    public void KeyboardZonesMakeOneVoicePerZoneThroughTheirOwnMixer()
+    {
+        PatchAnalysis zones = Fixtures.Zones;
+        List<string> Titles(Voice voice) => voice.ModuleIds.Select(id => zones.Module(id).Title).ToList();
+
+        Assert.Equal(2, zones.Voices.Count);
+        Assert.Equal("Zones › Pitch Zone A", zones.Voices[0].PitchOrigin);
+        Assert.Equal("Zones › Pitch Zone B", zones.Voices[1].PitchOrigin);
+        Assert.Equal(new[] { "Mix #1", "VCF #1" }, Titles(zones.Voices[0]).TakeLast(2));
+        Assert.Equal(new[] { "Mix #2", "VCF #2" }, Titles(zones.Voices[1]).TakeLast(2));
+        Assert.Equal(Band.Bus, zones.Modules.Single(m => m.Title == "VCA Mix").Band);
+    }
+
+    [Fact]
+    public void KeyboardZoneLanesTakeTheirEnvelopesAndVelocity()
+    {
+        PatchAnalysis zones = Fixtures.Zones;
+        IReadOnlyList<PatchGroup> groups = PatchGrouping.Build(zones);
+        List<string> Members(string key) => groups.Single(g => g.Key == key).Members.Select(id => zones.Module(id).Title).ToList();
+
+        Assert.Contains("ADSR EG #1", Members("voice-1"));
+        Assert.Equal(new[] { "ADSR EG #2", "Octave", "VCA" }, Members("voice-2").Intersect(new[] { "ADSR EG #2", "Octave", "VCA" }).Order());
+        Assert.Equal(new[] { "Audio 2", "VCA Mix" }, Members("bus").Order());
+    }
+
+    [Fact]
+    public void VelocityStaysCvThroughAnOctaveShifter()
+    {
+        PatchAnalysis zones = Fixtures.Zones;
+        string Title(long id) => zones.Module(id).Title;
+
+        Assert.Equal(SignalType.Cv, zones.Cables.Single(c => c.FromPort == "Velocity Zone B").Signal);
+        Assert.Equal(SignalType.Cv, zones.Cables.Single(c => Title(c.Cable.From.ModuleId) == "Octave").Signal);
+    }
+
+    [Fact]
+    public void ASingleVoiceWithoutMixerKeepsItsVcaAndFilterButNotTheMasterEffects()
+    {
+        PatchAnalysis patch = Fixtures.MatriarchJam;
+        IReadOnlyList<PatchGroup> groups = PatchGrouping.Build(patch);
+        List<string> Members(string key) => groups.Single(g => g.Key == key).Members.Select(id => patch.Module(id).Title).ToList();
+
+        // EG x VCA is an envelope, but it passes the audio through its VCA: it's in the sound path.
+        Assert.Equal(Role.Modifier, patch.Modules.Single(m => m.Title == "EG x VCA").Role);
+        Assert.Equal(new[] { "Classic VCO", "EG x VCA", "VCF" }, patch.Voices.Single().ModuleIds.Select(id => patch.Module(id).Title));
+        Assert.Equal(new[] { "Audio 2", "Delay", "Plateau" }, Members("bus").Order());
+    }
+
+    [Fact]
+    public void AMixerFedByASingleVoiceStaysOnTheBus()
+    {
+        string json = """
+            {
+              "modules": [
+                { "id": 1, "plugin": "Core", "model": "MIDIToCVInterface", "pos": [0, 0] },
+                { "id": 2, "plugin": "Fundamental", "model": "VCO", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "VCF", "pos": [20, 0] },
+                { "id": 4, "plugin": "Fundamental", "model": "Mixer", "pos": [30, 0] },
+                { "id": 5, "plugin": "Core", "model": "AudioInterface2", "pos": [40, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#ffd452" },
+                { "id": 2, "outputModuleId": 2, "outputId": 2, "inputModuleId": 3, "inputId": 3, "color": "#ff5252" },
+                { "id": 3, "outputModuleId": 3, "outputId": 0, "inputModuleId": 4, "inputId": 0, "color": "#ff5252" },
+                { "id": 4, "outputModuleId": 4, "outputId": 0, "inputModuleId": 5, "inputId": 0, "color": "#ff5252" }
+              ]
+            }
+            """;
+
+        PatchAnalysis single = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(Band.Bus, single.Modules.Single(m => m.Module.Model == "Mixer").Band);
+        Assert.Equal(Band.Voice, single.Modules.Single(m => m.Module.Model == "VCF").Band);
+    }
+
+    [Fact]
+    public void AMixerWhoseMixGoesBackIntoItsVoiceIsPartOfIt()
+    {
+        // Moog Matriarch style: a switch picks either the oscillators mixed together or one of them at a time.
+        string json = """
+            {
+              "modules": [
+                { "id": 1, "plugin": "Core", "model": "MIDIToCVInterface", "pos": [0, 0] },
+                { "id": 2, "plugin": "Fundamental", "model": "VCO", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "VCO", "pos": [20, 0] },
+                { "id": 4, "plugin": "Fundamental", "model": "SequentialSwitch2", "pos": [30, 0] },
+                { "id": 5, "plugin": "Fundamental", "model": "Mixer", "pos": [40, 0] },
+                { "id": 6, "plugin": "Fundamental", "model": "SequentialSwitch2", "pos": [50, 0] },
+                { "id": 7, "plugin": "Fundamental", "model": "VCF", "pos": [60, 0] },
+                { "id": 8, "plugin": "Core", "model": "AudioInterface2", "pos": [70, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#ffd452" },
+                { "id": 2, "outputModuleId": 1, "outputId": 0, "inputModuleId": 3, "inputId": 0, "color": "#ffd452" },
+                { "id": 3, "outputModuleId": 2, "outputId": 2, "inputModuleId": 4, "inputId": 2, "color": "#ff5252" },
+                { "id": 4, "outputModuleId": 3, "outputId": 2, "inputModuleId": 4, "inputId": 3, "color": "#ff5252" },
+                { "id": 5, "outputModuleId": 2, "outputId": 2, "inputModuleId": 5, "inputId": 0, "color": "#ff5252" },
+                { "id": 6, "outputModuleId": 3, "outputId": 2, "inputModuleId": 5, "inputId": 1, "color": "#ff5252" },
+                { "id": 7, "outputModuleId": 4, "outputId": 0, "inputModuleId": 6, "inputId": 2, "color": "#ff5252" },
+                { "id": 8, "outputModuleId": 5, "outputId": 0, "inputModuleId": 6, "inputId": 3, "color": "#ff5252" },
+                { "id": 9, "outputModuleId": 6, "outputId": 0, "inputModuleId": 7, "inputId": 3, "color": "#ff5252" },
+                { "id": 10, "outputModuleId": 7, "outputId": 0, "inputModuleId": 8, "inputId": 0, "color": "#ff5252" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Contains(patch.Modules.Single(m => m.Module.Model == "Mixer").Module.Id, patch.Voices.Single().ModuleIds);
+        Assert.Equal(Band.Voice, patch.Modules.Single(m => m.Module.Model == "Mixer").Band);
+    }
+
+    [Fact]
+    public void ASwitchTakesTheRoleOfWhatItRoutes()
+    {
+        PatchAnalysis sub37 = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("Subsequent37.vcv")));
+        AnalyzedModule Module(string title) => sub37.Modules.Single(m => m.Title == title);
+
+        // Picks the octave of a voice's pitch: a pitch processor.
+        Assert.Equal(Role.Pitch, Module("Sequential Switch 4 to 1 #1").Role);
+        // Mutes the sub oscillator: part of its voice, and what comes out of it is still audio.
+        Assert.Equal(Role.Modifier, Module("Sequential Switch 4 to 1 #2").Role);
+        Assert.Equal(SignalType.Audio, sub37.Cables.Single(c => c.FromPort == "Square").Signal);
+        Assert.Equal(SignalType.Audio, sub37.Cables.Single(c => sub37.Module(c.Cable.From.ModuleId).Title == "Sequential Switch 4 to 1 #2").Signal);
+    }
+
+    [Fact]
+    public void AnOscillatorAndItsMutableSubMakeOneVoice()
+    {
+        PatchAnalysis sub37 = PatchDiagram.Analyze(File.ReadAllBytes(Fixtures.Path("Subsequent37.vcv")));
+        Voice zoneA = sub37.Voices.Single(v => v.PitchOrigin == "Zones › Pitch Zone A");
+
+        Assert.Equal(
+            new[] { "Mix #2", "Sequential Switch 4 to 1 #2", "VCA #3", "VCO #2", "VCO #3" },
+            zoneA.ModuleIds.Select(id => sub37.Module(id).Title).Order());
+    }
+
+    [Fact]
+    public void EveryVoiceHasItsOwnLaneFoldedOrNot()
+    {
+        List<string> VoiceLanes(IReadOnlySet<string>? unfold) => PatchDiagram.Layout(analysis, "t", unfold).Bands
+            .Where(b => b.Band == Band.Voice).OrderBy(b => b.Y).Select(b => b.Group ?? b.Title).ToList();
+
+        // Unfolding a voice opens it in its own lane, where it already stood.
+        Assert.Equal(new[] { "Voice 1", "Voice 2" }, VoiceLanes(null));
+        Assert.Equal(new[] { "voice-1", "Voice 2" }, VoiceLanes(new HashSet<string> { "voice-1" }));
+        Assert.Equal(new[] { "Voice 1", "voice-2" }, VoiceLanes(new HashSet<string> { "voice-2" }));
+    }
+
+}
