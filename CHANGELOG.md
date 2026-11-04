@@ -10,6 +10,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   from its lowest output just under its box into its lowest input, crossing nothing; such modules count as feedback
   loops (folded boxes hint at them, `inspect` lists them).
 - The Info tab lists the patch's feedback loops.
+- A **Cardinal compatibility** option, on by default, in the Info tab and the Diagram tab's Options: turned off, the
+  Info tab's Cardinal column and the module sheet's Cardinal note go away, for Rack-only users. Remembered by the browser.
 
 ### Changed
 - Feedback cables are drawn dash-dot (scope links keep their plain dashes) instead of carrying a "↺ feedback" tag; the

@@ -287,6 +287,7 @@ body:has(.vpd-root[data-theme="dark"]) { background: #16171a; color-scheme: dark
 .vpd-info dt { color: var(--vpd-muted); }
 .vpd-info dd { margin: 0; overflow-wrap: anywhere; }
 .vpd-info dd ul.loops { margin: 0; padding: 0; list-style: none; }
+.vpd-info .info-option { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; color: var(--vpd-muted); cursor: pointer; }
 .vpd-info table { border-collapse: collapse; font-size: 14px; width: 100%; max-width: 960px; }
 .vpd-info th, .vpd-info td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--vpd-line); }
 .vpd-info th { color: var(--vpd-muted); font-weight: 600; }

@@ -21,6 +21,9 @@ public static class StoredState
     {
         // Scopes and displays drawn as boxes, next to what they watch.
         public static Options Default { get; } = new Options(new HashSet<string>(), false, true, false, true, MonitorView.Modules);
+
+        /// <summary>Whether Cardinal can load each module (Info tab, module sheet). On by default; Rack-only users may turn it off.</summary>
+        public bool CardinalSupport { get; init; } = true;
     }
 
     /// <summary>
@@ -53,7 +56,10 @@ public static class StoredState
             Flag(nameof(Options.PortTabs), Options.Default.PortTabs),
             Flag(nameof(Options.FunctionNames), Options.Default.FunctionNames),
             Flag(nameof(Options.LibraryLinks), Options.Default.LibraryLinks),
-            monitors);
+            monitors)
+        {
+            CardinalSupport = Flag(nameof(Options.CardinalSupport), Options.Default.CardinalSupport),
+        };
     }
 
     public static string SerializeOptions(Options options) => JsonSerializer.Serialize(new
@@ -65,6 +71,7 @@ public static class StoredState
         options.FunctionNames,
         options.LibraryLinks,
         options.Monitors,
+        options.CardinalSupport,
     });
 
     /// <summary>

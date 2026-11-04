@@ -90,7 +90,7 @@
 
         @if (diagram is not null && tab == Tab.Info)
         {
-            <PatchInfoView Analysis="analysis!" Archive="archive!" />
+            <PatchInfoView Analysis="analysis!" Archive="archive!" ShowCardinal="cardinalSupport" ShowCardinalChanged="ToggleCardinalSupport" />
         }
 
         @if (diagram is not null && tab == Tab.Modules)
@@ -147,6 +147,7 @@
                             <label><input type="checkbox" checked="@showIntents" @onchange="e => ToggleIntents((bool)e.Value!)" /> Intents on every cable</label>
                             <label><input type="checkbox" checked="@portTabs" @onchange="e => TogglePortTabs((bool)e.Value!)" /> Port names</label>
                             <label><input type="checkbox" checked="@functionNames" @onchange="e => ToggleFunctionNames((bool)e.Value!)" /> Function names</label>
+                            <label title="Whether Cardinal can load each module, in the Info tab and the module details"><input type="checkbox" checked="@cardinalSupport" @onchange="e => ToggleCardinalSupport((bool)e.Value!)" /> Cardinal compatibility</label>
                             <label title="A link to each module's VCV Library page; hover it to see the panel"><input type="checkbox" checked="@libraryLinks" @onchange="e => ToggleLibraryLinks((bool)e.Value!)" /> Library links</label>
                             @* Only offered when the patch has scopes or displays: otherwise the box would do nothing. *@
                             @if (MonitorCount > 0)
@@ -217,7 +218,7 @@
                                 }
                             </div>
                         }
-                        @if (SelectedCardinalSupport is CardinalSupport { Availability: not CardinalAvailability.Official } support)
+                        @if (cardinalSupport && SelectedCardinalSupport is CardinalSupport { Availability: not CardinalAvailability.Official } support)
                         {
                             @* Converting to Cardinal, or opening the patch there, would lose this module. *@
                             <p class="cardinal-note @(support.Availability == CardinalAvailability.Missing ? "missing" : "neilbgr")">
@@ -347,6 +348,7 @@
     private string? error;
     private DiagramEdge? selected;
     private bool showIntents;
+    private bool cardinalSupport = true;
     private HashSet<string> hiddenLayers = new HashSet<string>();
     private Dictionary<long, string> intents = new Dictionary<long, string>();
     private HashSet<string> unfolded = new HashSet<string>();
@@ -551,6 +553,12 @@
         return SaveOptionsAsync();
     }
 
+    private Task ToggleCardinalSupport(bool on)
+    {
+        cardinalSupport = on;
+        return SaveOptionsAsync();
+    }
+
     /// <summary>A stacked box unfolds; a module box shows (or hides) its details and keeps its cables highlighted.</summary>
     private void NodeClicked(DiagramNode node)
     {
@@ -649,7 +657,7 @@
     }
 
     private Task SaveOptionsAsync() =>
-        StoreAsync(StoredState.OptionsKey, StoredState.SerializeOptions(new StoredState.Options(hiddenLayers, showIntents, portTabs, functionNames, libraryLinks, monitors)));
+        StoreAsync(StoredState.OptionsKey, StoredState.SerializeOptions(new StoredState.Options(hiddenLayers, showIntents, portTabs, functionNames, libraryLinks, monitors) { CardinalSupport = cardinalSupport }));
 
     /// <summary>The display options remembered in this browser; whatever is damaged or from an older version, the defaults.</summary>
     private async Task LoadOptionsAsync()
@@ -661,6 +669,7 @@
         functionNames = options.FunctionNames;
         libraryLinks = options.LibraryLinks;
         monitors = options.Monitors;
+        cardinalSupport = options.CardinalSupport;
     }
 
     private void Select(DiagramEdge edge)

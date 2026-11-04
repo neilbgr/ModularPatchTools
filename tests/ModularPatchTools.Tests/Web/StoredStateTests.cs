@@ -9,7 +9,7 @@ public class StoredStateTests
 {
     /// <summary>Options compared by value (the record holds a set).</summary>
     private static string Fields(StoredState.Options o) =>
-        $"{string.Join(",", o.HiddenLayers.Order())}|{o.ShowIntents}|{o.PortTabs}|{o.FunctionNames}|{o.LibraryLinks}|{o.Monitors}";
+        $"{string.Join(",", o.HiddenLayers.Order())}|{o.ShowIntents}|{o.PortTabs}|{o.FunctionNames}|{o.LibraryLinks}|{o.Monitors}|{o.CardinalSupport}";
 
     [Fact]
     public void OptionsSurviveARoundTrip()
@@ -25,7 +25,17 @@ public class StoredStateTests
         StoredState.Options read = StoredState.ParseOptions("""{"HiddenLayers":["gate"],"ShowIntents":true,"PortTabs":false,"FunctionNames":false,"LibraryLinks":true,"Monitors":1}""");
 
         // Everything but the scope view, saved when "hidden" was the default: the scope boxes, the new default, apply.
-        Assert.Equal("gate|True|False|False|True|Modules", Fields(read));
+        Assert.Equal("gate|True|False|False|True|Modules|True", Fields(read));
+    }
+
+    [Fact]
+    public void CardinalCompatibilityShowsByDefaultAndCanBeTurnedOff()
+    {
+        // One of the reasons the tool exists: on unless the user turns it off, and kept off once they do.
+        Assert.True(StoredState.Options.Default.CardinalSupport);
+        Assert.True(StoredState.ParseOptions("""{"Version":2,"PortTabs":true}""").CardinalSupport);
+        StoredState.Options off = StoredState.Options.Default with { CardinalSupport = false };
+        Assert.False(StoredState.ParseOptions(StoredState.SerializeOptions(off)).CardinalSupport);
     }
 
     [Fact]

@@ -265,7 +265,7 @@ A few things worth knowing about this split:
 - modules no Cardinal build bundles (commercial plugins, plugins Cardinal never included);
 - modules only the [neilbgr edition of Cardinal](https://github.com/neilbgr/Cardinal) bundles (Aluminium, AmbientModules, newer versions of a few plugins): open the converted patch in that edition.
 
-The **Info** tab's *Cardinal* column says the same for each module: `Yes`, `Yes, as Cardinal Host MIDI` (Cardinal swaps it for its own module when loading), `neilbgr edition` or `No`; the details sheet of a selected module in the **Diagram** tab adds a note when official Cardinal can't load it. The list comes from `catalog/cardinal.json` (see [below](#port-catalog-and-roles)).
+The **Info** tab's *Cardinal* column says the same for each module: `Yes`, `Yes, as Cardinal Host MIDI` (Cardinal swaps it for its own module when loading), `neilbgr edition` or `No`; the details sheet of a selected module in the **Diagram** tab adds a note when official Cardinal can't load it. The list comes from `catalog/cardinal.json` (see [below](#port-catalog-and-roles)). Only interested in Rack? Untick **Cardinal compatibility** (in the Info tab, or the Diagram tab's Options): the column and the notes go away, and the browser remembers it. The **Convert** tab still warns when converting to Cardinal.
 
 **What it can't do:** pick a MIDI device for you. Cardinal receives MIDI directly from its host DAW, with no device selection at all, so there's nothing to carry over — after converting to Rack you'll need to open the new `MIDI-CV`/`MIDI-CC-CV`/`MIDI-Gate` modules and choose a MIDI input device by hand (the channel, however, is already set correctly).
 
@@ -290,7 +290,7 @@ Open http://localhost:5016 and drop a `.vcv` file (or add `?sample=AmbientJam` t
 
 - unfold/fold boxes, or use **Overview** / **Unfold all**;
 - the numbered layer chips, in their cable color: a hidden layer's chip shows every layer up to it, a shown one's hides just that layer;
-- **Options**: intents on every cable, port names on the box edges, function names in the titles, library links, and how to show scopes and displays (offered when the patch has some). These options, the layers shown and the theme are remembered by your browser for the next visit and the next patch;
+- **Options**: intents on every cable, port names on the box edges, function names in the titles, Cardinal compatibility (on by default), library links, and how to show scopes and displays (offered when the patch has some). These options, the layers shown and the theme are remembered by your browser for the next visit and the next patch;
 - drag the background to pan, Ctrl + wheel to zoom;
 - hover a box to follow its cables, click a module for its details (its real panel from the VCV Library, ports, links, and a note when official Cardinal can't load it) in a sheet at the bottom, click the panel to see it full height, click a cable to edit its intent;
 - **Export** `.html`, `.svg`, `.dot`, `.mmd` or `.json`.
