@@ -32,7 +32,6 @@
   "Bogaudio/Bogaudio-Pulse": "Source",
   "Bogaudio/Bogaudio-SampleHold": "Controller",
   "Bogaudio/Bogaudio-Slew": "Controller",
-  "Bogaudio/Bogaudio-Switch": "Controller",
   "Cardinal/HostAudio2": "Io",
   "Cardinal/HostAudio8": "Io",
   "Cardinal/HostCV": "Io",

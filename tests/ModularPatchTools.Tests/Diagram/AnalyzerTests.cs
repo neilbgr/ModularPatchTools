@@ -451,6 +451,65 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void ASwitchOutputCarriesWhatItRoutes()
+    {
+        // Two pitches into Bogaudio's SWITCH (one through a merge, typed after the switch): out comes pitch, even into an
+        // FM input; a switch picking between a pitch and a CV keeps its output into a 1V/octave input as pitch.
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Core", "model": "MIDIToCVInterface", "pos": [0, 0] },
+                { "id": 2, "plugin": "Bogaudio", "model": "Bogaudio-Switch", "pos": [10, 0] },
+                { "id": 3, "plugin": "Fundamental", "model": "Merge", "pos": [20, 0] },
+                { "id": 4, "plugin": "Fundamental", "model": "VCO", "pos": [30, 0] },
+                { "id": 5, "plugin": "Fundamental", "model": "VCO", "pos": [40, 0] },
+                { "id": 6, "plugin": "Bogaudio", "model": "Bogaudio-Switch", "pos": [50, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 3, "outputId": 0, "inputModuleId": 2, "inputId": 1, "color": "#123456" },
+                { "id": 2, "outputModuleId": 1, "outputId": 0, "inputModuleId": 3, "inputId": 0, "color": "#123456" },
+                { "id": 3, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 2, "color": "#123456" },
+                { "id": 4, "outputModuleId": 2, "outputId": 0, "inputModuleId": 4, "inputId": 1, "color": "#123456" },
+                { "id": 5, "outputModuleId": 1, "outputId": 2, "inputModuleId": 6, "inputId": 1, "color": "#123456" },
+                { "id": 6, "outputModuleId": 1, "outputId": 0, "inputModuleId": 6, "inputId": 2, "color": "#123456" },
+                { "id": 7, "outputModuleId": 6, "outputId": 0, "inputModuleId": 5, "inputId": 0, "color": "#123456" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(SignalType.Pitch, patch.Cables.Single(c => c.Cable.Id == 4).Signal);
+        Assert.Equal(SignalType.Pitch, patch.Cables.Single(c => c.Cable.Id == 7).Signal);
+        Assert.Equal(Role.Pitch, patch.Module(2).Role);
+    }
+
+    [Fact]
+    public void AReverbIntoAnEnvelopeFollowerThroughAUtilityIsAudio()
+    {
+        // LunarPlusTwelve: Plateau's outputs into HetrickCV Min-Max, its Max into LunarDetector's external source.
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Valley", "model": "Plateau", "pos": [0, 0] },
+                { "id": 2, "plugin": "HetrickCV", "model": "MinMax", "pos": [10, 0] },
+                { "id": 3, "plugin": "AmbientModules", "model": "LunarDetector", "pos": [20, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 0, "color": "#123456" },
+                { "id": 2, "outputModuleId": 2, "outputId": 1, "inputModuleId": 3, "inputId": 0, "color": "#123456" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.All(patch.Cables, c => Assert.Equal(SignalType.Audio, c.Signal));
+    }
+
+    [Fact]
     public void SurgeOscillatorPortsAndModulationAreNamedAndTyped()
     {
         // Aluminium's Subsequent37-Duo demo: Surge XT Classic VCOs, registered as VCOWidget<ot_classic>::M.

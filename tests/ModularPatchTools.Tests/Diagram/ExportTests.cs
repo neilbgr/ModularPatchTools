@@ -374,6 +374,21 @@ public class ExportTests
         Assert.Equal(0, Barycenter.Crossings(ordered, segments));
     }
 
+    [Fact]
+    public void BarycenterLinesUpWithAnInsertUnderItsHost()
+    {
+        // "host" carries an insert under it: what the insert feeds goes below what the host itself feeds.
+        List<List<string>> columns = new List<List<string>> { new List<string> { "host" }, new List<string> { "fromInsert", "fromHost" } };
+        List<(string U, string V)> segments = new List<(string U, string V)> { ("host", "fromInsert"), ("host", "fromHost") };
+        List<(double U, double V)> offsets = new List<(double U, double V)> { (0.5, 0), (0, 0) };
+        Assert.Equal(0, Barycenter.Crossings(columns, segments));
+        Assert.Equal(1, Barycenter.Crossings(columns, segments, offsets));
+
+        List<List<string>> ordered = Barycenter.Order(columns, segments, _ => 0, offsets);
+
+        Assert.Equal(new[] { "fromHost", "fromInsert" }, ordered[1]);
+    }
+
     [Theory]
     [InlineData("NotBoringDrone3.vcv")]
     [InlineData("Solar42f16.vcv")]

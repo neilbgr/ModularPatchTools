@@ -193,6 +193,10 @@ public class CatalogTests
         // "Bogaudio-Switch" used to match "Audio" and be taken for an I/O module.
         (Role role, bool _) = RoleCatalog.FromJson("{}").Resolve("Bogaudio", "Bogaudio-Switch", new ModuleInfo(null, new[] { "Switch" }, Array.Empty<string>(), Array.Empty<string>()));
 
-        Assert.Equal(Role.Controller, role);
+        Assert.Equal(Role.Router, role);
     }
+
+    [Fact]
+    public void BogaudioSwitchIsARouter() =>
+        Assert.Equal(Role.Router, RoleCatalog.LoadEmbedded().Resolve("Bogaudio", "Bogaudio-Switch", PortCatalog.LoadEmbedded().Get("Bogaudio", "Bogaudio-Switch")).Role);
 }

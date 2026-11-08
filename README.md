@@ -114,7 +114,7 @@ Inspired by the diagrams of the YouTube channel *MonoTrail Tech Talk*:
 - **Port tabs**: where a cable plugs into a box, a small tab in the cable's color names the port (`V/oct`, `Gate`, `Cutoff`, `CC 74`, `A2`…). You see what a cable acts on without reading anything along it. Long names are shortened; hover a tab for the full name. Off with "port names" (web app) or `--no-ports` (CLI).
 - **Trunks**: cables leaving the same output share one exit, one line and their first turn, then branch towards their targets, like a mult.
 - **Function icons**: each module box shows what it does with a small drawing (waveform for an oscillator, cutoff slope for a filter, ADSR outline for an envelope…), and its function in the subtitle. With "function names" (web app) or `--functions` (CLI), the function becomes the title (`FILTER #1`, `ENVELOPE #2`) and the module name goes under it.
-- **VCV Library links**: a small ↗ icon on each module box opens its page on [library.vcvrack.com](https://library.vcvrack.com), to find the module in Rack or Cardinal. Hovering the icon shows the module's panel. The screenshot is fetched only then, kept for the rest of the session and cached by the browser; a module the Library doesn't have is remembered and never asked for again. Cardinal-only modules get no icon. A folded group has a panels icon instead (no link): hovering it shows each of its modules once, with a `×3` badge when there are several, up to 12 panels. Off with "library links" (web app) or `--no-links` (CLI).
+- **VCV Library links**: a small ↗ icon on each module box opens its page on [library.vcvrack.com](https://library.vcvrack.com), to find the module in Rack or Cardinal. Hovering the icon shows the module's panel. The screenshot is fetched only then, kept for the rest of the session and cached by the browser; a module the Library doesn't have is remembered for a day before it is asked for again. Cardinal-only modules get no icon. A folded group has a panels icon instead (no link): hovering it shows each of its modules once, with a `×3` badge when there are several, up to 12 panels. Off with "library links" (web app) or `--no-links` (CLI).
 - **Legend**: an exported `.svg` carries its own legend (the signals and roles it shows), so it reads on its own once shared.
 
 ### Cables, by signal type
@@ -129,6 +129,8 @@ The type comes from the patch's own cable colors, cross-checked with the real po
 | Gate / trig / clock | thin, blue | `#52beff` |
 
 When a color contradicts the port (a red cable from an LFO into a cutoff CV input), the port wins and a diagnostic says so.
+
+A cable whose color isn't in the table is typed from its ports, then from what the modules are: what an oscillator or an effect sends out is audio (unless it goes into a CV input), a logic module takes gates, an envelope follower takes audio, and a switch, a merge or a mult passes on what it gets (a switch's output into a 1V/octave input stays pitch).
 
 ### Layers, a teaching path
 

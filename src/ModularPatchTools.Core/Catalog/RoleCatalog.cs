@@ -34,7 +34,7 @@ public sealed class RoleCatalog
         ("Slew limiter", Role.Controller),
         ("Envelope follower", Role.Controller),
         ("Controller", Role.Controller),
-        ("Switch", Role.Controller),
+        ("Switch", Role.Router),
         ("Voltage-controlled oscillator", Role.Source),
         ("Oscillator", Role.Source),
         ("Noise", Role.Source),

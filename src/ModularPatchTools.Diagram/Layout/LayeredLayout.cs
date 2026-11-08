@@ -59,7 +59,7 @@ public static class LayeredLayout
         List<Lane> lanes = AssignLanes(folding, stacks.Boxes);
         Dictionary<string, int> laneOf = LaneOf(lanes);
         Routing routing = PlanTracks(merged, stacks, columns, laneOf);
-        List<List<string>> order = Barycenter.Order(InitialOrder(stacks.Boxes, columns, routing.TrackColumn), routing.Segments, e => laneOf[e]);
+        List<List<string>> order = Barycenter.Order(InitialOrder(stacks.Boxes, columns, routing.TrackColumn), routing.Segments, e => laneOf[e], routing.Offsets);
 
         // Cables leaving from the same output port(s) form a trunk: one exit on the box, one first turn, then they branch.
         // A docked expander's cables leave from its base with the expander's port ids: its port name tells them apart.
@@ -294,7 +294,8 @@ public static class LayeredLayout
     /// <param name="TrackColumn">Column of each track (virtual node).</param>
     /// <param name="Segments">Links between boxes and tracks of adjacent columns, feedback cables left aside.</param>
     /// <param name="PredecessorOf">The box or track each track comes from.</param>
-    private sealed record Routing(Dictionary<EdgeKey, Plan> Plans, Dictionary<string, int> TrackColumn, List<(string U, string V)> Segments, HashSet<string> FeedbackTracks, Dictionary<string, string> PredecessorOf);
+    /// <param name="Offsets">Per segment, how far down its stack it leaves or enters a box (an insert under its host).</param>
+    private sealed record Routing(Dictionary<EdgeKey, Plan> Plans, Dictionary<string, int> TrackColumn, List<(string U, string V)> Segments, HashSet<string> FeedbackTracks, Dictionary<string, string> PredecessorOf, List<(double U, double V)> Offsets);
 
     /// <summary>
     /// Virtual nodes: a cable gets one track per column it passes, in its source's lane (added to laneOf). A feedback
@@ -306,6 +307,8 @@ public static class LayeredLayout
         Dictionary<EdgeKey, Plan> plans = new Dictionary<EdgeKey, Plan>();
         Dictionary<string, int> trackColumn = new Dictionary<string, int>();
         List<(string U, string V)> segments = new List<(string U, string V)>();
+        List<(double U, double V)> offsets = new List<(double U, double V)>();
+        double InStack(string box) => (double)stacks.StackOf[stacks.AnchorOf[box]].IndexOf(box) / stacks.StackOf[stacks.AnchorOf[box]].Count;
         foreach (IGrouping<EdgeKey, AnalyzedCable> edge in merged)
         {
             string source = stacks.AnchorOf[edge.Key.From];
@@ -344,12 +347,13 @@ public static class LayeredLayout
             for (int i = 0; i + 1 < chain.Count; i++)
             {
                 segments.Add((chain[i], chain[i + 1]));
+                offsets.Add((i == 0 ? InStack(edge.Key.From) : 0, i + 2 == chain.Count && chain[^1] == target ? InStack(edge.Key.To) : 0));
             }
         }
 
         HashSet<string> feedbackTracks = plans.Values.Where(p => p.Feedback).SelectMany(p => p.Tracks).ToHashSet();
         Dictionary<string, string> predecessorOf = segments.Where(s => trackColumn.ContainsKey(s.V)).ToDictionary(s => s.V, s => s.U);
-        return new Routing(plans, trackColumn, segments, feedbackTracks, predecessorOf);
+        return new Routing(plans, trackColumn, segments, feedbackTracks, predecessorOf, offsets);
     }
 
     /// <summary>Boxes then tracks of each column, before crossing reduction.</summary>

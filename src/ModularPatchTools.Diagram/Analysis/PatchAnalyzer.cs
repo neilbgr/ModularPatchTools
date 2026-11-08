@@ -221,7 +221,8 @@ public sealed class PatchAnalyzer
                 }
             }
 
-            (SignalType signal, string? mismatch) = classifier.Classify(cable.Color, typedFromPort, typedToPort, roleById[from.Id], roleById[to.Id]);
+            (SignalType signal, string? mismatch) = classifier.Classify(cable.Color, typedFromPort, typedToPort, roleById[from.Id], roleById[to.Id],
+                baseOf.ContainsKey(toModule.Id) ? null : SignalClassifier.InputsOf(ports.Get(to.Plugin, to.Model).Tags));
             if (mismatch is not null)
             {
                 diagnostics.Add($"{titles[from.Id]} '{fromPort}' → {titles[to.Id]} '{toPort}': {mismatch}");
@@ -237,25 +238,33 @@ public sealed class PatchAnalyzer
         }
 
         // Some modules pass on what they get, whatever their output is called: an octave shifter fed a velocity outputs a
-        // velocity, a switch routing oscillators outputs audio. Only when the cable color doesn't already say so; repeat
-        // for chains of them.
-        for (bool changed = true; changed;)
+        // velocity, a switch routing oscillators outputs audio. Only when the cable color doesn't already say so, and a
+        // switch's output into a 1V/octave input stays pitch. Repeated for chains of them, each time from the cables'
+        // own types, so a switch typed before what feeds it is typed again (bounded, in case a loop never settles).
+        List<AnalyzedCable> own = cables.ToList();
+        for (int round = 0, changed = 1; changed > 0 && round <= cables.Count; round++)
         {
-            changed = false;
+            changed = 0;
             for (int i = 0; i < cables.Count; i++)
             {
                 AnalyzedCable cable = cables[i];
                 long from = cable.Cable.From.ModuleId;
-                if (classifier.KnowsColor(cable.Cable.Color) || PassedOn(from, cables, roleById) is not SignalType passed || passed == cable.Signal)
+                if (classifier.KnowsColor(cable.Cable.Color)
+                    || roleById[from] == Role.Router && SignalClassifier.FromPortName(cable.ToPort) == SignalType.Pitch)
                 {
                     continue;
                 }
-                cables[i] = cable with
+                SignalType wanted = PassedOn(from, cables, roleById) ?? own[i].Signal;
+                if (wanted == cable.Signal)
                 {
-                    Signal = passed,
-                    SuggestedIntent = IntentSuggester.Suggest(passed, titles[from], cable.FromPort.Split(" › ")[^1], titles[cable.Cable.To.ModuleId], cable.ToPort.Split(" › ")[^1], roleById[from], roleById[cable.Cable.To.ModuleId], labeledInputs[i]),
+                    continue;
+                }
+                cables[i] = wanted == own[i].Signal ? own[i] : cable with
+                {
+                    Signal = wanted,
+                    SuggestedIntent = IntentSuggester.Suggest(wanted, titles[from], cable.FromPort.Split(" › ")[^1], titles[cable.Cable.To.ModuleId], cable.ToPort.Split(" › ")[^1], roleById[from], roleById[cable.Cable.To.ModuleId], labeledInputs[i]),
                 };
-                changed = true;
+                changed++;
             }
         }
 

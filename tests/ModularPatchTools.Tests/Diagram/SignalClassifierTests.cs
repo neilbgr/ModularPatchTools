@@ -68,4 +68,23 @@ public class SignalClassifierTests
         Assert.Equal(SignalType.Gate, type);
         Assert.Null(mismatch);
     }
+
+    [Fact]
+    public void AnEffectOutputIsAudioWhereverItGoes()
+    {
+        Assert.Equal(SignalType.Audio, classifier.Classify(null, "Left", "In1", Role.Effect, Role.Controller).Type);
+        Assert.Equal(SignalType.Cv, classifier.Classify(null, "Left", "Level CV", Role.Effect, Role.Controller).Type);
+    }
+
+    [Fact]
+    public void ALogicModuleTakesGates() =>
+        Assert.Equal(SignalType.Gate, classifier.Classify(null, "Cell 5 · CC 31", "Logic signal B", Role.Io, Role.Time, SignalClassifier.InputsOf(new[] { "Logic", "Polyphonic" })).Type);
+
+    [Fact]
+    public void AnEnvelopeFollowerTakesAudio() =>
+        Assert.Equal(SignalType.Audio, classifier.Classify(null, "Max", "External source", Role.Controller, Role.Controller, SignalClassifier.InputsOf(new[] { "Envelope follower", "Utility" })).Type);
+
+    [Fact]
+    public void AComparatorTaggedLogicTakesAnySignal() =>
+        Assert.Null(SignalClassifier.InputsOf(new[] { "Distortion", "Logic", "Waveshaper" }));
 }

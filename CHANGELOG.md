@@ -8,6 +8,15 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 ### Fixed
 - An oscillator patched into a control input of an effect or a mixer (a delay's Clock, an FM input…) was treated as
   audio, with a "color says Gate" warning: its cable color now decides, as for any other modulation.
+- Modules tagged "Switch" (Bogaudio SWITCH…) were controllers, with their output typed CV: they are now switches, whose
+  output carries what they route (pitch in, pitch out). A switch typed before what feeds it no longer keeps a wrong
+  type, and its output into a 1V/octave input stays pitch.
+- An effect's or an oscillator's output into a utility (a reverb into a min/max…) was CV: it is audio, unless it goes
+  into an input named CV.
+- With no known cable color, a logic module's inputs (Bogaudio BOOL…) take gates and an envelope follower's input
+  takes audio.
+- A cable leaving an insert (stacked under its host) was ordered as if it left the host, which could cross it with
+  the host's own cables (the audio output put under what the insert feeds).
 
 ## [1.4.1] - 2026-11-04
 

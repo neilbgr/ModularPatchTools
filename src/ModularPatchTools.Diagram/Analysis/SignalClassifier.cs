@@ -26,6 +26,7 @@ public sealed class SignalClassifier
     private static readonly string[] expressionWords = { "velocity", "vel", "aftertouch", "aft", "pressure", "expression", "mod wheel", "modwheel" };
     private static readonly string[] cvInputWords = { "cv" };
     private static readonly string[] modulationInputWords = { "cv", "fm", "pm", "am", "sync", "mod", "modulation", "phase", "exp", "lin", "rate", "freq", "frequency", "cutoff", "fold", "shape", "pwm", "pw" };
+    private static readonly string[] shapingTags = { "Distortion", "Waveshaper", "Limiter", "Comparator", "Voltage-controlled amplifier", "Filter", "Mixer", "Attenuator" };
     private static readonly string[] controlWords = { "cv", "select", "index", "step", "steps" };
 
     private readonly IReadOnlyDictionary<string, SignalType> palette;
@@ -35,7 +36,11 @@ public sealed class SignalClassifier
     /// <summary>Whether this cable color is part of the palette (then it decides the signal type).</summary>
     public bool KnowsColor(string? color) => color is not null && palette.ContainsKey(color);
 
-    public (SignalType Type, string? Mismatch) Classify(string? color, string fromPort, string toPort, Role fromRole, Role toRole)
+    /// <param name="toTakes">
+    /// What the receiving module's inputs take, from what it is, when the input's name doesn't say: a logic module's
+    /// inputs take gates, an envelope follower's takes audio (see <see cref="InputsOf"/>).
+    /// </param>
+    public (SignalType Type, string? Mismatch) Classify(string? color, string fromPort, string toPort, Role fromRole, Role toRole, SignalType? toTakes = null)
     {
         SignalType? byColor = color is not null && palette.TryGetValue(color, out SignalType t) ? t : null;
         SignalType? byFromPort = FromPortName(fromPort);
@@ -74,12 +79,28 @@ public sealed class SignalClassifier
         {
             return (toType, null);
         }
+        if (toTakes is SignalType taken && !HasWord(toPort, cvInputWords))
+        {
+            return (taken, null);
+        }
 
         // An input named "CV" (a mixer's channel level CV…) takes a modulation, even from an audio processor.
+        // What an oscillator or an effect sends out is its sound, wherever it goes (a reverb's output into a min/max
+        // utility…), unless it goes into an input named CV.
         bool audioFrom = fromRole is Role.Source or Role.Modifier or Role.Effect or Role.Mixer;
-        bool audioTo = (toRole is Role.Modifier or Role.Effect or Role.Mixer or Role.Io or Role.Router) && !HasWord(toPort, cvInputWords);
+        bool audioTo = (toRole is Role.Modifier or Role.Effect or Role.Mixer or Role.Io or Role.Router || fromRole is Role.Source or Role.Effect)
+            && !HasWord(toPort, cvInputWords);
         return (audioFrom && audioTo ? SignalType.Audio : SignalType.Cv, null);
     }
+
+    /// <summary>
+    /// What a module's inputs take by what it is (its tags), when their names don't say: null when nothing. A logic
+    /// module that also shapes or compares voltages (a window comparator tagged waveshaper…) takes any signal.
+    /// </summary>
+    public static SignalType? InputsOf(IReadOnlyList<string> tags) =>
+        tags.Contains("Logic", StringComparer.OrdinalIgnoreCase) && !tags.Intersect(shapingTags, StringComparer.OrdinalIgnoreCase).Any() ? SignalType.Gate
+        : tags.Contains("Envelope follower", StringComparer.OrdinalIgnoreCase) ? SignalType.Audio
+        : null;
 
     /// <summary>A switch's control input (clock, reset, select…), as opposed to a signal it routes.</summary>
     public static bool IsControlPort(string portName) => FromPortName(portName) == SignalType.Gate || HasWord(portName, controlWords);
