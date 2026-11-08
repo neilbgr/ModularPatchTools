@@ -18,6 +18,11 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 - A cable leaving an insert (stacked under its host) was ordered as if it left the host, which could cross it with
   the host's own cables (the audio output put under what the insert feeds).
 
+### Changed
+- Fewer crossings where they hurt: a cable linking two neighbouring boxes is kept clear of crossings before long
+  cables on their way further, so a chain (MIDI → keyboard → zones) reads straight, and neighbouring boxes swap
+  places when that removes crossings.
+
 ## [1.4.1] - 2026-11-04
 
 ### Fixed

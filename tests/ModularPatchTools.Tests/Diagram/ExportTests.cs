@@ -375,6 +375,20 @@ public class ExportTests
     }
 
     [Fact]
+    public void BarycenterLetsLongCablesCrossRatherThanADirectLink()
+    {
+        // One crossing either way: between the two long cables (tracks), or across the direct link from a to p.
+        List<List<string>> columns = new List<List<string>> { new List<string> { "a", "t1" }, new List<string> { "t2", "p" } };
+        List<(string U, string V)> segments = new List<(string U, string V)> { ("a", "p"), ("a", "t2"), ("t1", "p"), ("t1", "t2") };
+
+        List<List<string>> ordered = Barycenter.Order(columns, segments, _ => 0, isTrack: e => e.StartsWith('t'));
+
+        // The direct link a → p keeps straight: a and p on the same side of the tracks.
+        Assert.Equal(ordered[0].IndexOf("a") < ordered[0].IndexOf("t1"), ordered[1].IndexOf("p") < ordered[1].IndexOf("t2"));
+        Assert.Equal(1, Barycenter.Crossings(ordered, segments));
+    }
+
+    [Fact]
     public void BarycenterLinesUpWithAnInsertUnderItsHost()
     {
         // "host" carries an insert under it: what the insert feeds goes below what the host itself feeds.

@@ -59,7 +59,7 @@ public static class LayeredLayout
         List<Lane> lanes = AssignLanes(folding, stacks.Boxes);
         Dictionary<string, int> laneOf = LaneOf(lanes);
         Routing routing = PlanTracks(merged, stacks, columns, laneOf);
-        List<List<string>> order = Barycenter.Order(InitialOrder(stacks.Boxes, columns, routing.TrackColumn), routing.Segments, e => laneOf[e], routing.Offsets);
+        List<List<string>> order = Barycenter.Order(InitialOrder(stacks.Boxes, columns, routing.TrackColumn), routing.Segments, e => laneOf[e], routing.Offsets, routing.TrackColumn.ContainsKey);
 
         // Cables leaving from the same output port(s) form a trunk: one exit on the box, one first turn, then they branch.
         // A docked expander's cables leave from its base with the expander's port ids: its port name tells them apart.
