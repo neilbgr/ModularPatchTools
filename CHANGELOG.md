@@ -5,6 +5,8 @@ made; on release, the section is renamed to the version and becomes the GitHub r
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-09
+
 ### Fixed
 - An oscillator patched into a control input of an effect or a mixer (a delay's Clock, an FM input…) was treated as
   audio, with a "color says Gate" warning: its cable color now decides, as for any other modulation.
@@ -168,7 +170,8 @@ First release.
 - **Convert**: patches between VCV Rack and Cardinal, with warnings for modules official Cardinal doesn't load.
 - Web app (Blazor WebAssembly, runs in the browser) and `vcvpatch` command line for Linux, Windows and macOS.
 
-[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/neilbgr/ModularPatchTools/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/neilbgr/ModularPatchTools/compare/v1.3.0...v1.3.1
