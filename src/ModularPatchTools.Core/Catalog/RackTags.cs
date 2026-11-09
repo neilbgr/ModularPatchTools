@@ -39,6 +39,12 @@ public static class RackTags
         ["Voltage controlled amplifier"] = "Voltage-controlled amplifier",
     };
 
+    /// <summary>
+    /// The tags under Rack's own names, each counted when a manifest packs several in one ("Mixer, Utilities").
+    /// </summary>
+    public static List<string> Canonical(IEnumerable<string> tags) =>
+        tags.SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).Select(Canonical).ToList();
+
     /// <summary>The tag under Rack's own name ("Drums" is "Drum", "lfo" is "Low-frequency oscillator"); an unknown tag as is.</summary>
     public static string Canonical(string tag)
     {

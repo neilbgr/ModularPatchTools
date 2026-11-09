@@ -486,6 +486,32 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void SwitchesFeedingEachOtherDoNotHangTheAnalysis()
+    {
+        // Two switches in a loop, fed a pitch and a velocity: whatever they settle on, the typing stops.
+        string json = """
+            {
+              "version": "2.6.0",
+              "modules": [
+                { "id": 1, "plugin": "Core", "model": "MIDIToCVInterface", "pos": [0, 0] },
+                { "id": 2, "plugin": "Bogaudio", "model": "Bogaudio-Switch", "pos": [10, 0] },
+                { "id": 3, "plugin": "Bogaudio", "model": "Bogaudio-Switch", "pos": [20, 0] }
+              ],
+              "cables": [
+                { "id": 1, "outputModuleId": 1, "outputId": 0, "inputModuleId": 2, "inputId": 1, "color": "#123456" },
+                { "id": 2, "outputModuleId": 2, "outputId": 0, "inputModuleId": 3, "inputId": 1, "color": "#123456" },
+                { "id": 3, "outputModuleId": 3, "outputId": 0, "inputModuleId": 2, "inputId": 2, "color": "#123456" },
+                { "id": 4, "outputModuleId": 1, "outputId": 2, "inputModuleId": 3, "inputId": 2, "color": "#123456" }
+              ]
+            }
+            """;
+
+        PatchAnalysis patch = PatchDiagram.Analyze(Encoding.UTF8.GetBytes(json));
+
+        Assert.Equal(4, patch.Cables.Count);
+    }
+
+    [Fact]
     public void AReverbIntoAnEnvelopeFollowerThroughAUtilityIsAudio()
     {
         // LunarPlusTwelve: Plateau's outputs into HetrickCV Min-Max, its Max into LunarDetector's external source.

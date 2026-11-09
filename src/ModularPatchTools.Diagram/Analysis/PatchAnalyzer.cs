@@ -240,21 +240,26 @@ public sealed class PatchAnalyzer
         // Some modules pass on what they get, whatever their output is called: an octave shifter fed a velocity outputs a
         // velocity, a switch routing oscillators outputs audio. Only when the cable color doesn't already say so, and a
         // switch's output into a 1V/octave input stays pitch. Repeated for chains of them, each time from the cables'
-        // own types, so a switch typed before what feeds it is typed again (bounded, in case a loop never settles).
+        // own types, so a switch typed before what feeds it is typed again. A chain can't be longer than there are such
+        // modules: more rounds mean a loop that never settles, and it stops there.
         List<AnalyzedCable> own = cables.ToList();
-        for (int round = 0, changed = 1; changed > 0 && round <= cables.Count; round++)
+        ILookup<long, int> fedInto = Enumerable.Range(0, cables.Count).ToLookup(i => cables[i].Cable.To.ModuleId);
+        HashSet<long> passing = roleById.Where(kv => kv.Value is Role.Pitch or Role.Router).Select(kv => kv.Key).ToHashSet();
+        for (int round = 0, changed = 1; changed > 0 && round <= passing.Count; round++)
         {
             changed = 0;
+            Dictionary<long, SignalType?> passedOn = passing.ToDictionary(id => id, id => PassedOn(roleById[id], fedInto[id].Select(i => cables[i])));
             for (int i = 0; i < cables.Count; i++)
             {
                 AnalyzedCable cable = cables[i];
                 long from = cable.Cable.From.ModuleId;
-                if (classifier.KnowsColor(cable.Cable.Color)
-                    || roleById[from] == Role.Router && SignalClassifier.FromPortName(cable.ToPort) == SignalType.Pitch)
+                // The 1V/octave input is told by its own name, not by a modulation matrix's routes shown in its place.
+                if (!passing.Contains(from) || classifier.KnowsColor(cable.Cable.Color)
+                    || roleById[from] == Role.Router && cable.Routes.Count == 0 && SignalClassifier.FromPortName(cable.ToPort) == SignalType.Pitch)
                 {
                     continue;
                 }
-                SignalType wanted = PassedOn(from, cables, roleById) ?? own[i].Signal;
+                SignalType wanted = passedOn[from] ?? own[i].Signal;
                 if (wanted == cable.Signal)
                 {
                     continue;
@@ -280,14 +285,14 @@ public sealed class PatchAnalyzer
     /// What a pass-through module sends out, from what it gets: a pitch processor fed only CV sends CV; a switch sends
     /// the one signal type of everything it routes (its clock, reset and select inputs left aside). Null otherwise.
     /// </summary>
-    private static SignalType? PassedOn(long moduleId, List<AnalyzedCable> cables, Dictionary<long, Role> roleById)
+    private static SignalType? PassedOn(Role role, IEnumerable<AnalyzedCable> fedCables)
     {
-        List<AnalyzedCable> fed = cables.Where(c => c.Cable.To.ModuleId == moduleId).ToList();
-        if (roleById[moduleId] == Role.Pitch)
+        List<AnalyzedCable> fed = fedCables.ToList();
+        if (role == Role.Pitch)
         {
             return fed.Count > 0 && fed.All(c => c.Signal == SignalType.Cv) ? SignalType.Cv : null;
         }
-        if (roleById[moduleId] == Role.Router)
+        if (role == Role.Router)
         {
             List<SignalType> routed = fed.Where(c => !SignalClassifier.IsControlPort(c.ToPort)).Select(c => c.Signal).Distinct().ToList();
             return routed.Count == 1 ? routed[0] : null;

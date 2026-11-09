@@ -13,8 +13,9 @@ made; on release, the section is renamed to the version and becomes the GitHub r
   type, and its output into a 1V/octave input stays pitch.
 - An effect's or an oscillator's output into a utility (a reverb into a min/max…) was CV: it is audio, unless it goes
   into an input named CV.
-- With no known cable color, a logic module's inputs (Bogaudio BOOL…) take gates and an envelope follower's input
-  takes audio.
+- With no known cable color, a logic module's inputs (Bogaudio BOOL…) take gates, unless it's also something else
+  than logic or clocks (a sample and hold, a switch, a waveshaper…); an envelope follower's input takes audio, a sample
+  and hold's takes CV (a noise into it is a random voltage source).
 - A cable leaving an insert (stacked under its host) was ordered as if it left the host, which could cross it with
   the host's own cables (the audio output put under what the insert feeds).
 

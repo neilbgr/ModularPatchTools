@@ -130,7 +130,7 @@ The type comes from the patch's own cable colors, cross-checked with the real po
 
 When a color contradicts the port (a red cable from an LFO into a cutoff CV input), the port wins and a diagnostic says so.
 
-A cable whose color isn't in the table is typed from its ports, then from what the modules are: what an oscillator or an effect sends out is audio (unless it goes into a CV input), a logic module takes gates, an envelope follower takes audio, and a switch, a merge or a mult passes on what it gets (a switch's output into a 1V/octave input stays pitch).
+A cable whose color isn't in the table is typed from its ports, then from what the modules are: what an oscillator or an effect sends out is audio (unless it goes into a CV input), a logic module takes gates, an envelope follower takes audio, a sample and hold takes CV, and a switch, a merge or a mult passes on what it gets (a switch's output into a 1V/octave input stays pitch).
 
 ### Layers, a teaching path
 

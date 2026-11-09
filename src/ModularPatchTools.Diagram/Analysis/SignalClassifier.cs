@@ -26,7 +26,11 @@ public sealed class SignalClassifier
     private static readonly string[] expressionWords = { "velocity", "vel", "aftertouch", "aft", "pressure", "expression", "mod wheel", "modwheel" };
     private static readonly string[] cvInputWords = { "cv" };
     private static readonly string[] modulationInputWords = { "cv", "fm", "pm", "am", "sync", "mod", "modulation", "phase", "exp", "lin", "rate", "freq", "frequency", "cutoff", "fold", "shape", "pwm", "pw" };
-    private static readonly string[] shapingTags = { "Distortion", "Waveshaper", "Limiter", "Comparator", "Voltage-controlled amplifier", "Filter", "Mixer", "Attenuator" };
+    // Inputs that only ever take a command (besides pitch and gate inputs): never where an oscillator's sound goes.
+    private static readonly string[] commandInputWords = { "cv", "fm", "pm", "sync", "modulation" };
+    // What a logic module may also be and still take only gates: anything else (a sample and hold, a switch, a
+    // waveshaper…) means its inputs take any voltage.
+    private static readonly string[] gateLogicTags = { "Logic", "Clock generator", "Clock modulator", "Sequencer", "Utility", "Polyphonic", "Dual", "Quad", "Hardware clone", "Visual", "Expander" };
     private static readonly string[] controlWords = { "cv", "select", "index", "step", "steps" };
 
     private readonly IReadOnlyDictionary<string, SignalType> palette;
@@ -38,7 +42,7 @@ public sealed class SignalClassifier
 
     /// <param name="toTakes">
     /// What the receiving module's inputs take, from what it is, when the input's name doesn't say: a logic module's
-    /// inputs take gates, an envelope follower's takes audio (see <see cref="InputsOf"/>).
+    /// inputs take gates, an envelope follower's takes audio, a sample and hold's takes CV (see <see cref="InputsOf"/>).
     /// </param>
     public (SignalType Type, string? Mismatch) Classify(string? color, string fromPort, string toPort, Role fromRole, Role toRole, SignalType? toTakes = null)
     {
@@ -51,7 +55,7 @@ public sealed class SignalClassifier
         // Not into a control input though: an oscillator patched into a delay's Clock or a filter's FM is used as
         // a clock or a modulation, and the color says which.
         bool sourceAudio = fromRole == Role.Source && toRole is Role.Modifier or Role.Effect or Role.Mixer
-            && byFromPort is null && !IsCvName(fromPort) && !IsModulationInput(toPort);
+            && byFromPort is null && !IsCvName(fromPort) && FromPortName(toPort) is null && !HasWord(toPort, commandInputWords);
         if (sourceAudio && byColor is SignalType wrongColor && wrongColor != SignalType.Audio)
         {
             return (SignalType.Audio, $"color says {wrongColor}, but a source's audio output into a {toRole.ToString().ToLowerInvariant()} is audio: treated as audio");
@@ -94,13 +98,21 @@ public sealed class SignalClassifier
     }
 
     /// <summary>
-    /// What a module's inputs take by what it is (its tags), when their names don't say: null when nothing. A logic
-    /// module that also shapes or compares voltages (a window comparator tagged waveshaper…) takes any signal.
+    /// What a module's inputs take by what it is (its tags, under Rack's own names), when their names don't say: null
+    /// when nothing. A logic module only takes gates when it's nothing else than logic, clocks and sequencing (not a
+    /// window comparator tagged waveshaper, not a sample and hold); a sample and hold takes CV, even from an oscillator
+    /// or a noise (a random voltage source).
     /// </summary>
-    public static SignalType? InputsOf(IReadOnlyList<string> tags) =>
-        tags.Contains("Logic", StringComparer.OrdinalIgnoreCase) && !tags.Intersect(shapingTags, StringComparer.OrdinalIgnoreCase).Any() ? SignalType.Gate
-        : tags.Contains("Envelope follower", StringComparer.OrdinalIgnoreCase) ? SignalType.Audio
-        : null;
+    public static SignalType? InputsOf(IEnumerable<string> tags)
+    {
+        List<string> canonical = RackTags.Canonical(tags);
+        bool Has(string tag) => canonical.Contains(tag, StringComparer.OrdinalIgnoreCase);
+        if (Has("Logic") && canonical.All(t => gateLogicTags.Contains(t, StringComparer.OrdinalIgnoreCase)))
+        {
+            return SignalType.Gate;
+        }
+        return Has("Envelope follower") ? SignalType.Audio : Has("Sample and hold") ? SignalType.Cv : null;
+    }
 
     /// <summary>A switch's control input (clock, reset, select…), as opposed to a signal it routes.</summary>
     public static bool IsControlPort(string portName) => FromPortName(portName) == SignalType.Gate || HasWord(portName, controlWords);

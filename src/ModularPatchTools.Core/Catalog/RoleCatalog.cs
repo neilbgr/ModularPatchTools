@@ -117,8 +117,7 @@ public sealed class RoleCatalog
     /// <summary>The role the tags decide (under Rack's own names: "Drums" is "Drum"); null when none does.</summary>
     public static Role? FromTags(IEnumerable<string> tags)
     {
-        // Some manifests pack several tags in one ("Mixer, Utilities"): each counts.
-        List<string> canonical = tags.SelectMany(t => t.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).Select(RackTags.Canonical).ToList();
+        List<string> canonical = RackTags.Canonical(tags);
         foreach ((string tag, Role role) in tagRoles)
         {
             if (canonical.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)))

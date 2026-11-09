@@ -87,4 +87,26 @@ public class SignalClassifierTests
     [Fact]
     public void AComparatorTaggedLogicTakesAnySignal() =>
         Assert.Null(SignalClassifier.InputsOf(new[] { "Distortion", "Logic", "Waveshaper" }));
+
+    [Theory]
+    [InlineData(new[] { "Logic", "Sample and hold" }, SignalType.Cv)]
+    [InlineData(new[] { "Switch", "Logic" }, null)]
+    [InlineData(new[] { "Logic", "VCA" }, null)]
+    [InlineData(new[] { "Logic, Utility" }, SignalType.Gate)]
+    [InlineData(new[] { "Clock modulator", "Logic", "Poly" }, SignalType.Gate)]
+    [InlineData(new[] { "S&H" }, SignalType.Cv)]
+    public void WhatAModuleTakesComesFromAllItsTags(string[] tags, SignalType? expected) =>
+        Assert.Equal(expected, SignalClassifier.InputsOf(tags));
+
+    [Fact]
+    public void ANoiseIntoASampleAndHoldIsCv() =>
+        Assert.Equal(SignalType.Cv, classifier.Classify(null, "White", "In", Role.Source, Role.Controller, SignalClassifier.InputsOf(new[] { "Sample and hold" })).Type);
+
+    [Fact]
+    public void AnOscillatorIntoARingModulatorsModInputIsStillAudio()
+    {
+        (SignalType type, string? mismatch) = classifier.Classify("#52beff", "Sine", "Mod", Role.Source, Role.Modifier);
+        Assert.Equal(SignalType.Audio, type);
+        Assert.NotNull(mismatch);
+    }
 }
